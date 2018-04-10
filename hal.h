@@ -148,6 +148,13 @@ typedef enum
 
 //! \brief Enumeration for the LED numbers
 //!
+#ifdef SUPPORT_V08_HW
+typedef enum
+{
+  HAL_Gpio_LED_G=GPIO_Number_8,  //!< GPIO pin number for ControlCARD LED 2
+  HAL_Gpio_LED_R=GPIO_Number_12   //!< GPIO pin number for ControlCARD LED 3
+} HAL_LedNumber_e;
+#else
 #ifdef SUPPORT_V0_HW
 typedef enum
 {
@@ -167,7 +174,7 @@ typedef enum
   HAL_Gpio_LED3=GPIO_Number_34   //!< GPIO pin number for ControlCARD LED 3
 } HAL_LedNumber_e;
 #endif //#ifndef NARA_INVERTER
-
+#endif
 // select whether to use the hall input on connector QEP or CAP of the EVM
 #define JH_QEP
 //#define JH_CAP
@@ -1140,13 +1147,9 @@ extern void HAL_setupPwms(HAL_Handle handle,
 
 //! \brief     Sets up the PWM DACs (Pulse Width Modulator Digital to Analog Converters)
 //! \param[in] handle  The hardware abstraction layer (HAL) handle
-#ifdef SUPPORT_V0_HW_PWMDAC
-extern void HAL_setupPwmDacs(HAL_Handle handle, const float_t pwmPeriod_usec);
-#else
 extern void HAL_setupPwmDacs(HAL_Handle handle);
-#endif
 
-#ifdef SUPPORT_V0_HW_USER_PWM
+#ifdef SUPPORT_V08_HW
 void HAL_setupPwmUser(HAL_Handle handle,
 		const uint_least16_t systemFreq_MHz,
 		const float_t pwmPeriod_usec);
@@ -1288,6 +1291,26 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
   return;
 } // end of HAL_writePwmData() function
 
+#ifdef SUPPORT_V08_HW
+static inline uint16_t HAL_writePwmDataRegen(HAL_Handle handle, _iq dutyCycle)
+{
+  HAL_Obj *obj = (HAL_Obj *)handle;
+  PWM_Obj *pwm;
+  _iq period;
+  _iq value;
+  uint16_t value_sat;
+
+  pwm = (PWM_Obj *)obj->pwmUserHandle; // REGEN
+  period = (_iq)pwm->TBPRD;
+  value = _IQmpy(dutyCycle, period);
+  value_sat = (uint16_t)_IQsat(value, period, _IQ(0.0));
+
+  // write the PWM data
+  PWM_write_CmpA(obj->pwmUserHandle,value_sat);
+
+  return value_sat;
+} // end of HAL_writePwmData() function
+#else
 #ifdef SUPPORT_V0_HW_USER_PWM
 static inline uint16_t HAL_writePwmDataDA(HAL_Handle handle, _iq dutyCycle)
 {
@@ -1308,7 +1331,7 @@ static inline uint16_t HAL_writePwmDataDA(HAL_Handle handle, _iq dutyCycle)
   return value_sat;
 } // end of HAL_writePwmData() function
 
-#ifndef SUPPORT_REGEN_GPIO
+
 static inline uint16_t HAL_writePwmDataRegen(HAL_Handle handle, _iq dutyCycle)
 {
   HAL_Obj *obj = (HAL_Obj *)handle;

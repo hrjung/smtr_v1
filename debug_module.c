@@ -193,7 +193,6 @@ STATIC int dbg_setStepFreq(int argc, char *argv[]);
 STATIC int dbg_setInitRelay(int argc, char *argv[]);
 STATIC int dbg_setShaftBrake(int argc, char *argv[]);
 STATIC int dbg_setLed(int argc, char *argv[]);
-STATIC int dbg_setPwmAout(int argc, char *argv[]);
 STATIC int dbg_showVersion(int argc, char *argv[]);
 
 #ifdef SAMPLE_ADC_VALUE
@@ -278,7 +277,6 @@ tCmdLineEntry g_sCmdTable[DBG_CMD_ENUM_MAX] =
 	{"irel", dbg_setInitRelay, " irel : set Init Relay"},
 	{"sbrk", dbg_setShaftBrake, " sbrk (0/1) : set Shaft Brake off/on"},
 	{"led", dbg_setLed, " led (0~3) 0/1 : set Led R,G,R2,G2 off/on"},
-	{"pwm", dbg_setPwmAout, " pwm duty(0-100): set PWM A_out "},
 	{"ver", dbg_showVersion, " ver : show HW, FW version"},
 
 #ifdef SAMPLE_ADC_VALUE
@@ -318,7 +316,6 @@ tCmdLineEntry g_sCmdTable[DBG_CMD_ENUM_MAX] =
 	{"irel", dbg_setInitRelay, " irel"},
 	{"sbrk", dbg_setShaftBrake, " sbrk"},
 	{"led", dbg_setLed, " led"},
-	{"pwm", dbg_setPwmAout, " pwm"},
 	{"ver", dbg_showVersion, " ver"},
 
 #ifdef SAMPLE_ADC_VALUE
@@ -1291,15 +1288,15 @@ sbrk_err:
 STATIC int dbg_setLed(int argc, char *argv[])
 {
 	int type, on_off;
-	int led_type[] = {HAL_Gpio_LED_R, HAL_Gpio_LED_G, HAL_Gpio_LED_R2, HAL_Gpio_LED_G2};
-	char *led_str[] = {"LED_R", "LED_G", "LED_R2", "LED_G2"};
+	int led_type[] = {HAL_Gpio_LED_R, HAL_Gpio_LED_G};
+	char *led_str[] = {"LED_R", "LED_G"};
 
     if(argc != 3) goto led_err;
 
     type = atoi(argv[1]);
     on_off = atoi(argv[2]);
 
-    if(type < 0 || type > 3) goto led_err;
+    if(type < 0 || type > 1) goto led_err;
 	if(on_off != 0 && on_off != 1) goto led_err;
 
 	if(on_off == 1) //LED on
@@ -1317,29 +1314,6 @@ STATIC int dbg_setLed(int argc, char *argv[])
 
 led_err:
 	UARTprintf("%s\n", g_sCmdTable[DBG_CMD_SET_LED].pcHelp);
-    return 1;
-}
-
-STATIC int dbg_setPwmAout(int argc, char *argv[])
-{
-	int duty;
-	uint16_t ret=0;
-
-    if(argc != 2) goto pwm_err;
-
-    duty = atoi(argv[1]);
-
-	if(duty < 0 || duty > 100) goto pwm_err;
-
-#ifdef SUPPORT_V0_HW_USER_PWM
-	ret = UTIL_setPwmDuty(duty);
-	UARTprintf(" pwm_da duty %d ret=%d\n", duty, ret);
-#endif
-
-    return 0;
-
-pwm_err:
-	UARTprintf("%s\n", g_sCmdTable[DBG_CMD_SET_PWM_AO].pcHelp);
     return 1;
 }
 
@@ -1616,7 +1590,7 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     {
 
     	//UTIL_controlLed(HAL_Gpio_LED_R2, 1);
-    	UTIL_controlLed(HAL_Gpio_LED_G2, 1);
+    	UTIL_controlLed(HAL_Gpio_LED_G, 1);
 
     	// REGEN GPIO test
 //    	int on_off;

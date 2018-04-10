@@ -1,0 +1,14 @@
+# ignore .d extension
+*.d
+*.obj
+*.opt
+*.graphProp
+
+# ignore all files at /Debug directory
+Debug/
+Release/
+Flash/
+targetConfigs/
+.launches/
+.settings/
+temp_bk/

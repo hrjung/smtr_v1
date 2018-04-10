@@ -30,15 +30,6 @@
 
 #define SUPPORT_JUMP_FREQ
 
-// external GPIO interrupt for IPM fault signal
-#define IPM_DEFINE
-//
-//#define I2C_DEFINE
-////
-#define SPI_DEFINE
-
-#define BOOT_DEFINE
-
 // measure Irms for checking overload
 #define SUPPORT_I_RMS_MEASURE
 
@@ -71,11 +62,21 @@
 #define SAMYANG_1_5K_MOTOR
 //#define SAMYANG_2_2K_MOTOR
 
-#define SUPPORT_V0_HW
-#ifdef SUPPORT_V0_HW
-#define SUPPORT_V0_HW_PWM //fix polarity of PWM output
+//#define SUPPORT_V0_HW
+#define SUPPORT_V08_HW
 
-#define SUPPORT_V0_HW_ADC // adjust pin map
+
+#ifdef SUPPORT_V0_HW
+// external GPIO interrupt for IPM fault signal
+#define IPM_DEFINE
+//
+//#define I2C_DEFINE
+////
+#define SPI_DEFINE
+
+#define BOOT_DEFINE
+
+#define SUPPORT_V0_HW_PWM //fix polarity of PWM output
 
 #define SUPPORT_V0_HW_USER_PWM // added from HAL tutorial 6.4
 //#define SUPPORT_REGEN_GPIO

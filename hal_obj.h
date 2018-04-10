@@ -192,8 +192,12 @@ typedef struct _HAL_Obj_
   SPI_Handle    spiAHandle;         //!< the SPI handle
   SPI_Handle    spiBHandle;         //!< the SPI handle
 
+#ifdef SUPPORT_V08_HW
+  PWM_Handle	pwmUserHandle;
+#else
 #ifdef SUPPORT_V0_HW_USER_PWM
   PWM_Handle	pwmUserHandle[2];
+#endif
 #endif
 
 } HAL_Obj;

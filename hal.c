@@ -698,6 +698,16 @@ HAL_Handle HAL_init(void *pMemory,const size_t numBytes)
   obj->qepHandle[0] = QEP_init((void*)QEP1_BASE_ADDR,sizeof(QEP_Obj));
 #endif
 
+#ifdef SUPPORT_V08_HW
+  obj->sciAHandle = SCI_init((void*)SCIA_BASE_ADDR, sizeof(SCI_Obj));
+  obj->sciBHandle = SCI_init((void*)SCIB_BASE_ADDR, sizeof(SCI_Obj));
+
+  obj->spiAHandle = SPI_init((void*)SPIA_BASE_ADDR, sizeof(SPI_Obj)); //slave
+  obj->spiBHandle = SPI_init((void*)SPIB_BASE_ADDR, sizeof(SPI_Obj)); //master
+
+  obj->pwmUserHandle = PWM_init((void *)PWM_ePWM7_BASE_ADDR,sizeof(PWM_Obj));
+
+#else
 #ifdef SUPPORT_V0_HW
   obj->sciAHandle = SCI_init((void*)SCIA_BASE_ADDR, sizeof(SCI_Obj));
   obj->sciBHandle = SCI_init((void*)SCIB_BASE_ADDR, sizeof(SCI_Obj));
@@ -718,6 +728,7 @@ HAL_Handle HAL_init(void *pMemory,const size_t numBytes)
 #endif
 #endif
 
+#endif
 #endif
 
   return(handle);
@@ -809,7 +820,8 @@ void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
   // setup the PWM DACs
   HAL_setupPwmDacs(handle);
 
-#ifdef SUPPORT_V0_HW_USER_PWM
+//#ifdef SUPPORT_V0_HW_USER_PWM
+#ifdef SUPPORT_V08_HW
   // setup User PWM
   HAL_setupPwmUser(handle,
           (float_t)pUserParams->systemFreq_MHz,
@@ -911,6 +923,50 @@ void HAL_setupAdcs(HAL_Handle handle)
   ADC_setIntMode(obj->adcHandle,ADC_IntNumber_1,ADC_IntMode_ClearFlag);
   ADC_setIntSrc(obj->adcHandle,ADC_IntNumber_1,ADC_IntSrc_EOC7);
 
+#ifdef SUPPORT_V08_HW
+  //configure the SOCs for NARA Inverter
+  // U_I
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_0,ADC_SocChanNumber_A1);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_0,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_0,ADC_SocSampleDelay_9_cycles);
+
+  // V_I : ADCINA2
+  // Duplicate conversion due to ADC Initial Conversion bug (SPRZ342)
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_1,ADC_SocChanNumber_A2);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_1,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_1,ADC_SocSampleDelay_9_cycles);
+
+  // U_V : ADCINB1
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_2,ADC_SocChanNumber_B1);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_2,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_2,ADC_SocSampleDelay_9_cycles);
+
+  // W_I :
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_3,ADC_SocChanNumber_A4);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_3,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_3,ADC_SocSampleDelay_9_cycles);
+
+  // V_V
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_4,ADC_SocChanNumber_B2);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_4,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_4,ADC_SocSampleDelay_9_cycles);
+
+  // DCP
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_5,ADC_SocChanNumber_A5);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_5,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_5,ADC_SocSampleDelay_9_cycles);
+
+  // W_V
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_6,ADC_SocChanNumber_B4);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_6,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_6,ADC_SocSampleDelay_9_cycles);
+
+  // IPM LVIC Temperature
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_7,ADC_SocChanNumber_A6);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_7,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
+
+#else
 #ifdef SUPPORT_V0_HW
   //configure the SOCs for NARA Inverter
   // U_I
@@ -999,6 +1055,7 @@ void HAL_setupAdcs(HAL_Handle handle)
   ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
 
 #endif //SUPPORT_V0_HW
+#endif
 
   return;
 } // end of HAL_setupAdcs() function
@@ -1055,6 +1112,156 @@ void HAL_setupFlash(HAL_Handle handle)
 } // HAL_setupFlash() function
 
 
+#ifdef SUPPORT_H08_HW
+void HAL_setupGpios(HAL_Handle handle)
+{
+  HAL_Obj *obj = (HAL_Obj *)handle;
+
+  // PWM1
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_0,GPIO_0_Mode_EPWM1A);
+
+  // PWM2
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_1,GPIO_1_Mode_EPWM1B);
+
+  // PWM3
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_2,GPIO_2_Mode_EPWM2A);
+
+  // PWM4
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_3,GPIO_3_Mode_EPWM2B);
+
+  // PWM5
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_4,GPIO_4_Mode_EPWM3A);
+
+  // PWM6
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_5,GPIO_5_Mode_EPWM3B);
+
+  // not used : Input
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_6,GPIO_6_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_7,GPIO_7_Mode_GeneralPurpose);
+
+  // LED_G
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_8,GPIO_8_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_8);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_8,GPIO_Direction_Output);
+
+  // not used : Input
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_9,GPIO_9_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_10,GPIO_10_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_11,GPIO_11_Mode_GeneralPurpose);
+
+  // LED_R
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_12,GPIO_12_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_12);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_12,GPIO_Direction_Output);
+
+  // SPIB_SOMI : sensor
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_13, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_13, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_13,GPIO_13_Mode_SPISOMIB);
+
+  // SPIB_SCLK
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_14, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_14, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_14,GPIO_14_Mode_SPICLKB);
+
+  // SPIB_STE
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_15, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_15, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_15,GPIO_15_Mode_SPISTEB_NOT);
+
+  // SPIA_SIMO : with MCU
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_16, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_16, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_16,GPIO_16_Mode_SPISIMOA);
+
+  // SPIA_SOMI
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_17, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_17, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_17,GPIO_17_Mode_SPISOMIA);
+
+  // SPIA_SCLK
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_18, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_18, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_18,GPIO_18_Mode_SPICLKA);
+
+  // SPIA_STE
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_19, GPIO_Pullup_Enable);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_19,GPIO_Direction_Input);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_19, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_19,GPIO_19_Mode_SPISTEA_NOT);
+
+  // INIT_RELAY
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_20);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_20,GPIO_Direction_Output);
+
+  // not used
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_GeneralPurpose);
+
+  // ACC_SENSOR_INT
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
+
+  // BRKP
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_23);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_23,GPIO_Direction_Output);
+
+  // SPIB_SIMO : sensor
+  GPIO_setPullup(obj->gpioHandle, GPIO_Number_24, GPIO_Pullup_Enable);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_24, GPIO_Qual_ASync);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_24,GPIO_24_Mode_SPISIMOB);
+
+  // not used
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_25,GPIO_25_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_26,GPIO_26_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_27,GPIO_27_Mode_GeneralPurpose);
+
+  // SCIA_RX
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_28,GPIO_28_Mode_SCIRXDA);
+  // SCIA_TX
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_29,GPIO_29_Mode_SCITXDA);
+
+  // REGEN
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_30,GPIO_30_Mode_EPWM7A);
+
+  // nFAULT_IPM
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_31,GPIO_31_Mode_GeneralPurpose);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_31,GPIO_Direction_Input);
+  GPIO_setQualification(obj->gpioHandle, GPIO_Number_31, GPIO_Qual_Sync); // synch to SYSCLKOUT
+
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_32,GPIO_32_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_33,GPIO_33_Mode_GeneralPurpose);
+
+  // HIGH_FOR_BOOT
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_34,GPIO_34_Mode_GeneralPurpose);
+
+  // JTAG
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_35,GPIO_35_Mode_JTAG_TDI);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_36,GPIO_36_Mode_JTAG_TMS);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_37,GPIO_37_Mode_JTAG_TDO);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_38,GPIO_38_Mode_JTAG_TCK);
+
+  // not used
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_39,GPIO_39_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_40,GPIO_40_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_41,GPIO_41_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_42,GPIO_42_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_43,GPIO_43_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_44,GPIO_44_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_50,GPIO_50_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_51,GPIO_51_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_52,GPIO_52_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_53,GPIO_53_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_54,GPIO_54_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_55,GPIO_55_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_56,GPIO_56_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_57,GPIO_57_Mode_GeneralPurpose);
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_58,GPIO_58_Mode_GeneralPurpose);
+
+  return;
+}
+
+#else
 void HAL_setupGpios(HAL_Handle handle)
 {
   HAL_Obj *obj = (HAL_Obj *)handle;
@@ -1447,7 +1654,7 @@ void HAL_setupGpios(HAL_Handle handle)
 
   return;
 }  // end of HAL_setupGpios() function
-
+#endif
 
 void HAL_setupPie(HAL_Handle handle)
 {
@@ -1809,6 +2016,79 @@ void HAL_setupPwmDacs(HAL_Handle handle)
   return;
 }  // end of HAL_setupPwmDacs() function
 
+#ifdef SUPPORT_V08_HW
+void HAL_setupPwmUser(HAL_Handle handle,
+		const uint_least16_t systemFreq_MHz,
+		const float_t pwmPeriod_usec)
+{
+  HAL_Obj *obj = (HAL_Obj *)handle;
+  uint16_t period_cycles = (uint16_t)((float_t)systemFreq_MHz*pwmPeriod_usec);
+
+  // turns off the output of the EPWM peripheral
+  PWM_setOneShotTrip(obj->pwmUserHandle);
+
+  // setup the Time-Base Control Register (TBCTL)
+  PWM_setCounterMode(obj->pwmUserHandle,PWM_CounterMode_Up);
+  PWM_disableCounterLoad(obj->pwmUserHandle);
+  PWM_setPeriodLoad(obj->pwmUserHandle,PWM_PeriodLoad_Immediate);
+  PWM_setSyncMode(obj->pwmUserHandle,PWM_SyncMode_Disable);
+  PWM_setHighSpeedClkDiv(obj->pwmUserHandle,PWM_HspClkDiv_by_1);
+  PWM_setClkDiv(obj->pwmUserHandle,PWM_ClkDiv_by_1);
+  PWM_setPhaseDir(obj->pwmUserHandle,PWM_PhaseDir_CountUp);
+  PWM_setRunMode(obj->pwmUserHandle,PWM_RunMode_FreeRun);
+
+  // setup the Timer-Based Phase Register (TBPHS)
+  PWM_setPhase(obj->pwmUserHandle,0);
+
+  // setup the Time-Base Counter Register (TBCTR)
+  PWM_setCount(obj->pwmUserHandle,0);
+
+  // setup the Time-Base Period Register (TBPRD)
+  // set to zero initially
+  PWM_setPeriod(obj->pwmUserHandle,0);
+
+  // setup the Counter-Compare Control Register (CMPCTL)
+  PWM_setLoadMode_CmpA(obj->pwmUserHandle,PWM_LoadMode_Zero);
+  PWM_setShadowMode_CmpA(obj->pwmUserHandle,PWM_ShadowMode_Shadow);
+
+  // setup the Action-Qualifier Output A Register (AQCTLA)
+  PWM_setActionQual_CntUp_CmpA_PwmA(obj->pwmUserHandle,PWM_ActionQual_Clear);
+  PWM_setActionQual_Period_PwmA(obj->pwmUserHandle,PWM_ActionQual_Set);
+
+  // setup the Dead-Band Generator Control Register (DBCTL)
+  PWM_setDeadBandOutputMode(obj->pwmUserHandle,PWM_DeadBandOutputMode_Bypass);
+
+  // setup the PWM-Chopper Control Register (PCCTL)
+  PWM_disableChopping(obj->pwmUserHandle);
+
+  // setup the Trip Zone Select Register (TZSEL)
+  PWM_disableTripZones(obj->pwmUserHandle);
+
+  // setup the Event Trigger Selection Register (ETSEL)
+  PWM_disableInt(obj->pwmUserHandle);
+  PWM_disableSocAPulse(obj->pwmUserHandle);
+
+
+  // setup the Event Trigger Prescale Register (ETPS)
+  PWM_setIntPeriod(obj->pwmUserHandle,PWM_IntPeriod_FirstEvent);
+  PWM_setSocAPeriod(obj->pwmUserHandle,PWM_SocPeriod_FirstEvent);
+
+  // setup the Event Trigger Clear Register (ETCLR)
+  PWM_clearIntFlag(obj->pwmUserHandle);
+  PWM_clearSocAFlag(obj->pwmUserHandle);
+
+  // since the PWM is configured as an up counter, the period register is set to
+  // the desired PWM period
+  PWM_setPeriod(obj->pwmUserHandle,period_cycles);
+
+  // turns on the output of the EPWM peripheral
+  PWM_clearOneShotTrip(obj->pwmUserHandle);
+
+  return;
+}  // end of HAL_setupPwms() function
+
+#else
+
 #ifdef SUPPORT_V0_HW_USER_PWM
 void HAL_setupPwmUser(HAL_Handle handle,
 		const uint_least16_t systemFreq_MHz,
@@ -1820,13 +2100,9 @@ void HAL_setupPwmUser(HAL_Handle handle,
 
   // turns off the output of the EPWM peripheral
   PWM_setOneShotTrip(obj->pwmUserHandle[0]);
-#ifdef SUPPORT_REGEN_GPIO
-  for(cnt=0; cnt<1; cnt++)
-#else
   PWM_setOneShotTrip(obj->pwmUserHandle[1]);
 
   for(cnt=0; cnt<2; cnt++)
-#endif
   {
 	  // setup the Time-Base Control Register (TBCTL)
 	  PWM_setCounterMode(obj->pwmUserHandle[cnt],PWM_CounterMode_Up);
@@ -1888,6 +2164,7 @@ void HAL_setupPwmUser(HAL_Handle handle,
 
   return;
 }  // end of HAL_setupPwms() function
+#endif
 #endif
 
 

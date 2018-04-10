@@ -173,10 +173,14 @@ interrupt void timer0ISR(void)
 #if 1
 	if(gTimerCount%1000 == 0)
 	{
+#ifdef SUPPORT_V08_HW
+		HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+#else
 #ifdef SUPPORT_V0_HW
 		HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 #else
 		HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED3);
+#endif
 #endif
 //    	ADC_readCurrentControl(&adc_data);
     	//UARTprintf(" %d, %d\n", (int)gTimerCount, (int)secCnt);

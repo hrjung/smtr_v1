@@ -1023,7 +1023,6 @@ void main(void)
   initParam();
 
   MAIN_setDeviceConstant();
-  UTIL_setPwmDuty(0);
   UTIL_setRegenPwmDuty(0);
   PROT_init(mtr.input_voltage);
   //DRV_setPwmFrequency(PWM_4KHz); //test
@@ -1609,10 +1608,14 @@ interrupt void mainISR(void)
 	  if(++gLEDcnt >= (uint_least32_t)(USER_ISR_FREQ_Hz / LED_BLINK_FREQ_Hz))
 #endif
   {
+#ifdef SUPPORT_V08_HW
+		HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
+#else
 #ifdef SUPPORT_V0_HW
 	    HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 #else
 	    HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED2);
+#endif
 #endif
 	    gLEDcnt = 0;
   }
@@ -2310,8 +2313,7 @@ int UTIL_controlLed(int type, int on_off)
 {
 	int result = 0;
 
-	if(type == HAL_Gpio_LED_R || type == HAL_Gpio_LED_G
-		|| type == HAL_Gpio_LED_R2 || type == HAL_Gpio_LED_G2)
+	if(type == HAL_Gpio_LED_R || type == HAL_Gpio_LED_G)
 	{
 		if(on_off == 1)
 			HAL_setGpioHigh(halHandle,(GPIO_Number_e)type);
@@ -2331,17 +2333,17 @@ int UTIL_controlLed(int type, int on_off)
 void UTIL_testbit(int on_off) // LD2
 {
 	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R2);
+		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R2);
+		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
 void UTIL_testbitG2(int on_off) // LD1
 {
 	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G2);
+		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G2);
+		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 }
 
 void UTIL_setInitRelay(void)
@@ -2373,35 +2375,6 @@ void UTIL_setScaleFactor(void)
 	sf4krpm_pu = (mtr.poles*1000.0) / (60.0*USER_IQ_FULL_SCALE_FREQ_Hz);
 }
 
-#ifdef SUPPORT_V0_HW_USER_PWM
-uint16_t UTIL_setPwmDuty(int duty)
-{
-	_iq req_duty, pwm_duty = _IQ(0.0);
-	uint16_t user_pwm=0;
-
-	req_duty = _IQ(0.95) - _IQ((float_t)duty/100.0);
-	pwm_duty = _IQsat(req_duty, _IQ(0.95), _IQ(0.02));
-
-	user_pwm = HAL_writePwmDataDA(halHandle, pwm_duty);
-
-	return user_pwm;
-}
-#endif
-
-#ifdef SUPPORT_REGEN_GPIO
-int regen_bit=0;
-void UTIL_setRegenBit(void)
-{
-	regen_bit = 1;
-	HAL_setGpioHigh(halHandle,(GPIO_Number_e)GPIO_Number_30);
-}
-
-void UTIL_clearRegenBit(void)
-{
-	regen_bit = 0;
-	HAL_setGpioLow(halHandle,(GPIO_Number_e)GPIO_Number_30);
-}
-#else
 uint16_t UTIL_setRegenPwmDuty(int duty)
 {
 	float_t pwm_duty;
@@ -2413,7 +2386,6 @@ uint16_t UTIL_setRegenPwmDuty(int duty)
 
 	return user_pwm;
 }
-#endif
 
 bool UTIL_readOverTemperatureWarning(void)
 {
