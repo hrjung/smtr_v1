@@ -700,7 +700,7 @@ HAL_Handle HAL_init(void *pMemory,const size_t numBytes)
 
 #ifdef SUPPORT_V08_HW
   obj->sciAHandle = SCI_init((void*)SCIA_BASE_ADDR, sizeof(SCI_Obj));
-  obj->sciBHandle = SCI_init((void*)SCIB_BASE_ADDR, sizeof(SCI_Obj));
+  //obj->sciBHandle = SCI_init((void*)SCIB_BASE_ADDR, sizeof(SCI_Obj));
 
   obj->spiAHandle = SPI_init((void*)SPIA_BASE_ADDR, sizeof(SPI_Obj)); //slave
   obj->spiBHandle = SPI_init((void*)SPIB_BASE_ADDR, sizeof(SPI_Obj)); //master

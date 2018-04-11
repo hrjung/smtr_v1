@@ -185,7 +185,7 @@ typedef struct _HAL_Obj_
 #endif
 
   SCI_Handle    sciAHandle;         //!< the SCI handle
-  SCI_Handle    sciBHandle;         //!< the SCI handle
+  //SCI_Handle    sciBHandle;         //!< the SCI handle
 
   //I2C_Handle    i2cHandle;          //!< the I2C handle
 
