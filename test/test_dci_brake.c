@@ -71,9 +71,6 @@ void test_setDciBrakeParam(void)
 	int exp=0;
 	float_t value;
 
-	param.ctrl.freq_min = 10.0;
-	param.ctrl.freq_max = 350.0;
-
 	// start_freq
 	value = 50.0; // in range
 	exp = 0;

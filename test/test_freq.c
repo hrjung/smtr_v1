@@ -77,73 +77,20 @@ void test_setFreqParam(void)
 {
 	int result=0;
 	int exp=0;
-	int index=0;
 	float_t value, cur, low, high;
 //	int i=0;
 
 	// set normal working frequency
 	value=10.0;
 	exp=0; // OK
-	result = FREQ_setFreqValue(index, value);
+	result = FREQ_setFreqValue(value);
 	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.value[index]);
+	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.value);
 
 	// set higher than default frequency
 	value=500.0;
 	exp=1; //NOK
-	result = FREQ_setFreqValue(index, value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-
-
-	// set min freq range error < DEFAULT_MIN
-//	value=0;
-//	exp=1; //NOK
-//	result = FREQ_setFreqRangeMin(value);
-//	TEST_ASSERT_EQUAL_INT(result, exp);
-
-	// set min freq range error > DEFAULT_MAX
-	value=500.0;
-	exp=1; //NOK
-	result = FREQ_setFreqRangeMin(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-
-	// set min freq range OK
-	value=100.0;
-	exp=0; //OK
-	result = FREQ_setFreqRangeMin(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.freq_min);
-
-
-	// set max freq range error < DEFAULT_MIN
-	value=0;
-	exp=1; //NOK
-	result = FREQ_setFreqRangeMax(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-
-	// set max freq range error > DEFAULT_MAX
-	value=500.0;
-	exp=1; //NOK
-	result = FREQ_setFreqRangeMax(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-
-	// set max freq range OK : 100 ~ 300
-	value=300.0;
-	exp=0; //OK
-	result = FREQ_setFreqRangeMax(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.freq_max);
-
-	// set min freq range error > freq.max
-	value=350.0;
-	exp=1; //NOK
-	result = FREQ_setFreqRangeMin(value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-
-	// set max freq range error < freq.min
-	value=50.0;
-	exp=1; //NOK
-	result = FREQ_setFreqRangeMax(value);
+	result = FREQ_setFreqValue(value);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	cur = value;
@@ -163,9 +110,9 @@ void test_setFreqParam(void)
 	// set OK in min ~ max range
 	value = 250.0;
 	exp = 0;
-	result = FREQ_setFreqValue(index, value);
+	result = FREQ_setFreqValue(value);
 	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.value[index]);
+	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.value);
 
 	//set jump freq
 	// current min ~ max : 100 ~ 300
@@ -197,14 +144,14 @@ void test_setFreqParam(void)
 	TEST_ASSERT_EQUAL_FLOAT(param.ctrl.jump[0].high, high);
 
 	cur = 150.0;
-	result = FREQ_setFreqValue(index, cur);
+	result = FREQ_setFreqValue(cur);
 	value = 175.0;
 	exp = 170; // low jump
 	result = FREQ_getVarifiedFreq(cur, value);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	cur = 190.0;
-	result = FREQ_setFreqValue(index, cur);
+	result = FREQ_setFreqValue(cur);
 	value = 175.0;
 	exp = 180; // high jump
 	result = FREQ_getVarifiedFreq(cur, value);
@@ -217,20 +164,6 @@ void test_setFreqParam(void)
 	result = FREQ_getVarifiedFreq(cur, value);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
-
-	// set multi-step frequency
-	index=1;
-	value=10.0;
-	exp=0; // OK
-	result = FREQ_setFreqValue(index, value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_FLOAT(value, param.ctrl.value[index]);
-
-	index=8; // out of array
-	value=10.0;
-	exp=1; // NOK
-	result = FREQ_setFreqValue(index, value);
-	TEST_ASSERT_EQUAL_INT(exp, result);
 }
 
 #endif

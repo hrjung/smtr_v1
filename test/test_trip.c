@@ -90,7 +90,6 @@ void test_errorTrip(void)
 	exp = 5;
 	result = ERR_getCurrentErrCode();
 	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_INT(1, dev_param.err_index);
 
 	// fill all history
 	err=10;
@@ -105,7 +104,6 @@ void test_errorTrip(void)
 	exp=20;
 	result = ERR_getCurrentErrCode();
 	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_INT(4, dev_param.err_index);
 
 	// warp around for 6th error
 	err=25;
@@ -114,7 +112,6 @@ void test_errorTrip(void)
 	exp=25;
 	result = ERR_getCurrentErrCode();
 	TEST_ASSERT_EQUAL_INT(exp, result);
-	TEST_ASSERT_EQUAL_INT(0, dev_param.err_index);
 }
 
 #endif

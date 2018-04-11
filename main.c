@@ -1232,8 +1232,7 @@ void main(void)
 //
 //	RUN_TEST(test_controlDrive); //test_drive.c
 //
-//	RUN_TEST(test_setMultiControlDin);
-//
+
 	RUN_TEST(test_errorTrip); // test_trip.c
 
 	UNITY_END();

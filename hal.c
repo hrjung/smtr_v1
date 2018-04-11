@@ -1112,7 +1112,7 @@ void HAL_setupFlash(HAL_Handle handle)
 } // HAL_setupFlash() function
 
 
-#ifdef SUPPORT_H08_HW
+#ifdef SUPPORT_V08_HW
 void HAL_setupGpios(HAL_Handle handle)
 {
   HAL_Obj *obj = (HAL_Obj *)handle;
@@ -1135,9 +1135,15 @@ void HAL_setupGpios(HAL_Handle handle)
   // PWM6
   GPIO_setMode(obj->gpioHandle,GPIO_Number_5,GPIO_5_Mode_EPWM3B);
 
-  // not used : Input
+  // INIT_RELAY
   GPIO_setMode(obj->gpioHandle,GPIO_Number_6,GPIO_6_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_6);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_6,GPIO_Direction_Output);
+
+  // BRKP
   GPIO_setMode(obj->gpioHandle,GPIO_Number_7,GPIO_7_Mode_GeneralPurpose);
+  GPIO_setLow(obj->gpioHandle,GPIO_Number_7);
+  GPIO_setDirection(obj->gpioHandle,GPIO_Number_7,GPIO_Direction_Output);
 
   // LED_G
   GPIO_setMode(obj->gpioHandle,GPIO_Number_8,GPIO_8_Mode_GeneralPurpose);
@@ -1190,21 +1196,15 @@ void HAL_setupGpios(HAL_Handle handle)
   GPIO_setQualification(obj->gpioHandle, GPIO_Number_19, GPIO_Qual_ASync);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_19,GPIO_19_Mode_SPISTEA_NOT);
 
-  // INIT_RELAY
-  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
-  GPIO_setLow(obj->gpioHandle,GPIO_Number_20);
-  GPIO_setDirection(obj->gpioHandle,GPIO_Number_20,GPIO_Direction_Output);
-
   // not used
+  GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_GeneralPurpose);
 
   // ACC_SENSOR_INT
   GPIO_setMode(obj->gpioHandle,GPIO_Number_22,GPIO_22_Mode_GeneralPurpose);
 
-  // BRKP
+  // not used
   GPIO_setMode(obj->gpioHandle,GPIO_Number_23,GPIO_23_Mode_GeneralPurpose);
-  GPIO_setLow(obj->gpioHandle,GPIO_Number_23);
-  GPIO_setDirection(obj->gpioHandle,GPIO_Number_23,GPIO_Direction_Output);
 
   // SPIB_SIMO : sensor
   GPIO_setPullup(obj->gpioHandle, GPIO_Number_24, GPIO_Pullup_Enable);

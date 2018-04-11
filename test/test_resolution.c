@@ -490,9 +490,6 @@ void test_processResolutionMinMax(void)
 	int result;
 	int acc_time;
 
-	param.ctrl.freq_min = 0;
-	param.ctrl.freq_max = 360;
-
 	//test
 	exp = 0.000222f;
 	result = compare_float_almost_same(exp, 0x0003f);
