@@ -338,12 +338,7 @@ extern motor_param_st mtr;
 extern inverter_param_st param;
 extern inv_state_st state_param;
 extern internal_status_st internal_status;
-extern uint32_t timerCnt;
 
-//extern float MAIN_scaleDown2Krpm(int speed);
-//extern int MAIN_scaleUp2rpm(float speed);
-//extern float MAIN_convert2InternalSpeedRef(int speed);
-//extern int MAIN_convert2Speed(float speedRef);
 extern float_t MAIN_convert2Freq(float_t spd_krpm);
 extern void MAIN_setJumpSpeed(int index, float_t low, float_t high);
 
@@ -365,13 +360,8 @@ extern void UTIL_setScaleFactor(void);
 extern uint16_t UTIL_setPwmDuty(int duty);
 extern int UTIL_controlLed(int type, int on_off);
 extern void UTIL_testbit(int on_off);
-extern void UTIL_testbitG2(int on_off);
+extern void UTIL_testbitG(int on_off);
 
-#ifdef SUPPORT_REGEN_GPIO
-extern void UTIL_setRegenBit(void);
-extern void UTIL_clearRegenBit(void);
-#else
 extern uint16_t UTIL_setRegenPwmDuty(int duty);
-#endif
 
 #endif /* INV_PARAM_H_ */

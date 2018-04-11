@@ -576,6 +576,58 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
   _iq value;
   _iq current_sf = HAL_getCurrentScaleFactor(handle);
   _iq voltage_sf = HAL_getVoltageScaleFactor(handle);
+
+#ifdef SUPPORT_V08_HW
+  float_t f_val;
+
+// convert V_I
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_1);
+  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
+  pAdcData->I.value[0] = value;
+
+  // convert U_V
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_2);
+  value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[2];      // divide by 2^numAdcBits = 2^12
+  pAdcData->V.value[2] = -value;
+
+  // convert W_I
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_3);
+  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
+  pAdcData->I.value[1] = value;
+
+  // convert V_V
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_4);
+  value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[0];      // divide by 2^numAdcBits = 2^12
+  pAdcData->V.value[0] = -value;
+
+ // convert Vdc
+  f_val = (float_t)ADC_readResult(obj->adcHandle,ADC_ResultNumber_5);
+  f_val = f_val*0.2702 - 67.071; // calculated
+  //f_val = f_val*0.2665 - 56.555; // measured
+  pAdcData->dcBus = _IQ(f_val/USER_IQ_FULL_SCALE_VOLTAGE_V);
+
+  // convert W_V : hrjung : value = 0.000222*ADC - 0.000222*2048
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_6);
+  value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[1];      // divide by 2^numAdcBits = 2^12
+  pAdcData->V.value[1] = -value;
+
+  // convert IPM temperature
+  pAdcData->ipm_temperature = ADC_readResult(obj->adcHandle,ADC_ResultNumber_7);
+
+  // U_I calculation
+  pAdcData->I.value[2] = -(pAdcData->I.value[0] + pAdcData->I.value[1]);
+
+  // for monitoring
+#if 1
+  pAdcData->vdc_adc = ADC_readResult(obj->adcHandle,ADC_ResultNumber_5);
+  pAdcData->v_adc[0] = ADC_readResult(obj->adcHandle,ADC_ResultNumber_2); // U_V
+  pAdcData->v_adc[1] = ADC_readResult(obj->adcHandle,ADC_ResultNumber_4); // V_V
+  pAdcData->v_adc[2] = ADC_readResult(obj->adcHandle,ADC_ResultNumber_6); // W_V
+  pAdcData->i_adc[0] = ADC_readResult(obj->adcHandle,ADC_ResultNumber_1); // V_I
+  pAdcData->i_adc[1] = ADC_readResult(obj->adcHandle,ADC_ResultNumber_3); // W_I
+#endif
+
+#else
 #ifdef SUPPORT_V0_HW_ADC
   float_t f_val;
 
@@ -675,6 +727,7 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_7);     // divide by 2^numAdcBits = 2^12
   value = _IQ12mpy(value,voltage_sf);
   pAdcData->dcBus = value;
+#endif
 #endif
 
   return;

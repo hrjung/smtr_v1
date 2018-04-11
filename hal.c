@@ -925,7 +925,7 @@ void HAL_setupAdcs(HAL_Handle handle)
 
 #ifdef SUPPORT_V08_HW
   //configure the SOCs for NARA Inverter
-  // U_I
+  // U_I : not exist
   ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_0,ADC_SocChanNumber_A1);
   ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_0,ADC_SocTrigSrc_EPWM1_ADCSOCA);
   ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_0,ADC_SocSampleDelay_9_cycles);

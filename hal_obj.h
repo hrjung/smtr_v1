@@ -94,6 +94,15 @@ typedef struct _HAL_AdcData_t_
   MATH_vec3 V;          //!< the voltage values
 
   _iq       dcBus;      //!< the dcBus value
+
+#ifdef SUPPORT_V08_HW
+  uint_least16_t		vdc_adc;
+  uint_least16_t		v_adc[3];
+  uint_least16_t		i_adc[2];
+  uint_least16_t		ipm_temperature;
+  _iq		temp;
+#endif
+
 #ifdef SUPPORT_V0_HW_ADC
   uint_least16_t		p_mtr;
   uint_least16_t		vdc_adc;

@@ -1591,8 +1591,6 @@ interrupt void mainISR(void)
 #endif
 	//static float_t prev_val=0.0;
 
-	UTIL_testbitG2(0);
-	//UTIL_testbit(0);
   // toggle status LED
 	//HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 #if 1
@@ -1966,8 +1964,6 @@ interrupt void mainISR(void)
   DATALOG_update(datalogHandle);
 #endif
 
-  UTIL_testbitG2(1);
-  //UTIL_testbit(0);
 
   return;
 } // end of mainISR() function
@@ -2332,7 +2328,7 @@ void UTIL_testbit(int on_off) // LD2
 		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
-void UTIL_testbitG2(int on_off) // LD1
+void UTIL_testbitG(int on_off) // LD1
 {
 	if(on_off == 1)
 		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
