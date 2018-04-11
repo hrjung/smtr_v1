@@ -69,7 +69,7 @@
 #include "timer_handler.h"
 #include "protect.h"
 #include "err_trip.h"
-#include "nara_inv.h"
+#include "drv_spi.h"
 
 #include "motor_param.h"
 
@@ -1005,12 +1005,7 @@ void main(void)
   // set the hardware abstraction layer parameters
   HAL_setParams(halHandle,&gUserParams);
 
-#ifdef I2C_DEFINE
-  // enable I2C
-  I2CStdioInit(halHandle);
-#endif
-
-#ifdef SPI_DEFINE
+#ifdef SUPPORT_V08_HW
   //SPI-A : slave
   spi_fifo_init(halHandle->spiAHandle);
   spi_init(halHandle->spiAHandle);
@@ -2394,6 +2389,37 @@ bool UTIL_readOverTemperatureWarning(void)
 bool UTIL_readOverTemperatureFault(void)
 {
 	return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_25);
+}
+
+
+__interrupt void xint1_isr(void)
+{
+	MAIN_disableSystem();
+	ERR_setTripFlag(TRIP_REASON_IPM_FAULT);
+    PIE_clearInt(halHandle->pieHandle, PIE_GroupNumber_1);
+}
+
+void SetGpioInterrupt(void)
+{
+    PIE_Obj *pie = (PIE_Obj*)halHandle->pieHandle;
+
+    // set interrupt service routine
+    ENABLE_PROTECTED_REGISTER_WRITE_MODE;
+    pie->XINT1 = &xint1_isr;
+    DISABLE_PROTECTED_REGISTER_WRITE_MODE;
+
+    // enable XINT1
+    PIE_enable(halHandle->pieHandle);
+    PIE_enableInt(halHandle->pieHandle, PIE_GroupNumber_1, PIE_InterruptSource_XINT_1);
+    CPU_enableInt(halHandle->cpuHandle, CPU_IntNumber_1);
+    CPU_enableGlobalInts(halHandle->cpuHandle);
+
+    // set GPIO31 to XINT1
+    GPIO_setExtInt(halHandle->gpioHandle, GPIO_Number_31, CPU_ExtIntNumber_1);
+    PIE_setExtIntPolarity(halHandle->pieHandle, CPU_ExtIntNumber_1, PIE_ExtIntPolarity_FallingEdge);
+
+    // enable CPU1 interrupt for XINT1
+    PIE_enableExtInt(halHandle->pieHandle, CPU_ExtIntNumber_1);
 }
 
 //@} //defgroup

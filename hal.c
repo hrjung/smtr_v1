@@ -1176,24 +1176,24 @@ void HAL_setupGpios(HAL_Handle handle)
   GPIO_setMode(obj->gpioHandle,GPIO_Number_15,GPIO_15_Mode_SPISTEB_NOT);
 
   // SPIA_SIMO : with MCU
-  GPIO_setPullup(obj->gpioHandle, GPIO_Number_16, GPIO_Pullup_Enable);
-  GPIO_setQualification(obj->gpioHandle, GPIO_Number_16, GPIO_Qual_ASync);
+//  GPIO_setPullup(obj->gpioHandle, GPIO_Number_16, GPIO_Pullup_Enable);
+//  GPIO_setQualification(obj->gpioHandle, GPIO_Number_16, GPIO_Qual_ASync);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_16,GPIO_16_Mode_SPISIMOA);
 
   // SPIA_SOMI
-  GPIO_setPullup(obj->gpioHandle, GPIO_Number_17, GPIO_Pullup_Enable);
-  GPIO_setQualification(obj->gpioHandle, GPIO_Number_17, GPIO_Qual_ASync);
+//  GPIO_setPullup(obj->gpioHandle, GPIO_Number_17, GPIO_Pullup_Enable);
+//  GPIO_setQualification(obj->gpioHandle, GPIO_Number_17, GPIO_Qual_ASync);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_17,GPIO_17_Mode_SPISOMIA);
 
   // SPIA_SCLK
-  GPIO_setPullup(obj->gpioHandle, GPIO_Number_18, GPIO_Pullup_Enable);
-  GPIO_setQualification(obj->gpioHandle, GPIO_Number_18, GPIO_Qual_ASync);
+//  GPIO_setPullup(obj->gpioHandle, GPIO_Number_18, GPIO_Pullup_Enable);
+//  GPIO_setQualification(obj->gpioHandle, GPIO_Number_18, GPIO_Qual_ASync);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_18,GPIO_18_Mode_SPICLKA);
 
   // SPIA_STE
-  GPIO_setPullup(obj->gpioHandle, GPIO_Number_19, GPIO_Pullup_Enable);
-  GPIO_setDirection(obj->gpioHandle,GPIO_Number_19,GPIO_Direction_Input);
-  GPIO_setQualification(obj->gpioHandle, GPIO_Number_19, GPIO_Qual_ASync);
+//  GPIO_setPullup(obj->gpioHandle, GPIO_Number_19, GPIO_Pullup_Enable);
+//  GPIO_setDirection(obj->gpioHandle,GPIO_Number_19,GPIO_Direction_Input);
+//  GPIO_setQualification(obj->gpioHandle, GPIO_Number_19, GPIO_Qual_ASync);
   GPIO_setMode(obj->gpioHandle,GPIO_Number_19,GPIO_19_Mode_SPISTEA_NOT);
 
   // not used
@@ -1714,11 +1714,16 @@ void HAL_setupPeripheralClks(HAL_Handle handle)
   CLK_disableClaClock(obj->clkHandle);
 
   CLK_enableSciaClock(obj->clkHandle);
+#ifdef SUPPORT_V08_HW
+  CLK_enableSpiaClock(obj->clkHandle);
+  CLK_enableSpibClock(obj->clkHandle);
+#else
   CLK_enableScibClock(obj->clkHandle);
   CLK_enableI2cClock(obj->clkHandle);
 
   CLK_enableSpiaClock(obj->clkHandle);
   CLK_enableSpibClock(obj->clkHandle);
+#endif
   
   CLK_enableTbClockSync(obj->clkHandle);
 

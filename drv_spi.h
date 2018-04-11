@@ -11,8 +11,8 @@
 //             http://www.ti.com/ ALL RIGHTS RESERVED $
 //###########################################################################
 
-#ifndef __NARA_INV_H__
-#define __NARA_INV_H__
+#ifndef __DRV_SPI_H__
+#define __DRV_SPI_H__
 
 //*****************************************************************************
 //
@@ -27,7 +27,6 @@ extern "C"
 
 #include "hal_obj.h"
 #include "hal.h"
-#include "uart.h"
 
 
 //*****************************************************************************
@@ -37,16 +36,13 @@ extern "C"
 //
 //*****************************************************************************
 //#define
-#define SPI_MOTION              0x00
-#define SPI_ADC                 0x01
+
 
 //*****************************************************************************
 //
 // Prototypes for the APIs.
 //
 //*****************************************************************************
-extern void SetGpioInterrupt();
-__interrupt void xint1_isr(void);
 
 extern void spi_fifo_init(SPI_Handle spiHandle);
 extern void spi_init(SPI_Handle spiHandle);
@@ -63,6 +59,6 @@ extern uint16_t SPI_Read16(uint16_t chNo);
 }
 #endif
 
-#endif // __NARA_INV_H__
+#endif // __DRV_SPI_H__
 
 
