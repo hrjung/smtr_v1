@@ -215,7 +215,7 @@ _iq gTorque_Flux_Iq_pu_to_Nm_sf;
 
 
 
-dev_param_st	dev_param;
+//dev_param_st	dev_param;
 dev_const_st	dev_const;
 motor_param_st mtr;
 inverter_param_st param;
@@ -292,7 +292,7 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle);
 extern uint32_t secCnt;
 extern uint16_t MyModbusAddr;
 
-//interrupt void xint1_isr(void);
+void SetGpioInterrupt(void);
 // **************************************************************************
 // the functions
 
@@ -330,7 +330,7 @@ int MAIN_convert2Speed(float speedRef)
 
 	//if(speedRef < 0) speed = -1.0*speedRef;
 
-	speed /= dev_param.gear_ratio;
+	speed /= param.gear_ratio;
 	speed *= KRPM_SCALE_FACTOR;
 
 //	if(speed > dev_const.spd_rpm_max) speed = dev_const.spd_rpm_max;
@@ -809,6 +809,8 @@ void initParam(void)
 	param.protect.regen.thermal = 0.0;
 	param.protect.regen.band = 0;
 
+	param.gear_ratio = 1; //test
+
 }
 
 void init_global(void)
@@ -910,16 +912,6 @@ void init_global(void)
 
 void init_test_param(void)
 {
-	//device param
-	dev_param.nv_ver = 1;
-	dev_param.nv_size = sizeof(inverter_param_st)*2;
-	dev_param.dev_type = 10;
-	dev_param.motor_type = 5;
-	dev_param.serial_num = 1111;
-	dev_param.hw_ver_maj = 1;
-	dev_param.hw_ver_min = 1;
-	dev_param.gear_ratio = 1;
-
 	//motor params
 	mtr.effectiveness = TEST_MOTOR_EFFECTIVENESS;
 	mtr.slip_rate = TEST_MOTOR_SLIP_RATE; // offset speed for VF (krpm)
@@ -1021,7 +1013,6 @@ void main(void)
   UTIL_setRegenPwmDuty(0);
   PROT_init(mtr.input_voltage);
   //DRV_setPwmFrequency(PWM_4KHz); //test
-  dev_param.gear_ratio = 1; //test
 
 #ifdef SUPPORT_USER_VARIABLE
 
@@ -1108,10 +1099,10 @@ void main(void)
   // enable the ADC interrupts
   HAL_enableAdcInts(halHandle);
 
-#ifdef IPM_DEFINE
+//#ifdef IPM_DEFINE
   // set GPIO31 to XINT1 for FAULT_IPM
   SetGpioInterrupt();
-#endif
+//#endif
 
   // enable the SCI interrupts
   UARTStdioInit(halHandle, SCI_A);
@@ -1597,7 +1588,7 @@ interrupt void mainISR(void)
 #ifdef SUPPORT_USER_VARIABLE
   if(++gLEDcnt >= (uint_least32_t)(gUserParams.isrFreq_Hz / LED_BLINK_FREQ_Hz))
 #else
-	  if(++gLEDcnt >= (uint_least32_t)(USER_ISR_FREQ_Hz / LED_BLINK_FREQ_Hz))
+  if(++gLEDcnt >= (uint_least32_t)(USER_ISR_FREQ_Hz / LED_BLINK_FREQ_Hz))
 #endif
   {
 #ifdef SUPPORT_V08_HW
@@ -1811,7 +1802,7 @@ interrupt void mainISR(void)
   }
 
   //process PWM for DCI brake
-  MAIN_processDCBrake();
+  //MAIN_processDCBrake();
 
   // write the PWM compare values
   HAL_writePwmData(halHandle,&gPwmData);

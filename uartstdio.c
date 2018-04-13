@@ -324,7 +324,7 @@ void UARTStdioInitExpClk(HAL_Handle handle, int ulPortNum, unsigned long ulBaud)
     SCI_Obj *sci;
 
 #ifdef SUPPORT_V08_HW
-    sci = (SCI_Obj*)obj->sciAHandle; //only SCI-A available
+    sci = (SCI_Obj*)obj->sciAHandle;
 #else
     if(ulPortNum == SCI_A)
         sci = (SCI_Obj*)obj->sciAHandle;

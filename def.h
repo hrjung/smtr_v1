@@ -33,8 +33,6 @@
 // measure Irms for checking overload
 #define SUPPORT_I_RMS_MEASURE
 
-//#define MODBUS_DEBUG_PRINT
-
 //#define SUPPORT_FLYING_START
 
 // enable for unit test only
@@ -92,15 +90,5 @@
  * 		basic parameter definition
  */
 
-#define MAX_MULTI_FUNC_DIN_NUM	5
-#define MAX_MULTI_FUNC_DOUT_NUM	2
-
-//#define MAX_SPEED_STEP_NUM	8
-#define MAX_FREQ_STEP_NUM	8
-//#define MAX_TIME_STEP_NUM	1
-//#define MAX_TIME_STEP_NUM	8
-
-#define FAULT_HISTORY_NUM	5
-#define MAX_JUMP_FREQ_NUM	3
 
 #endif /* DEF_H_ */

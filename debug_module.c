@@ -386,7 +386,7 @@ STATIC void dbg_showTripData(void)
 	//for(i=0; i<FAULT_HISTORY_NUM; i++)
 	{
 		UARTprintf("\t errCode: 0x%x, freq: %f, cur : %f, state=%d \n", \
-				dev_param.err_info.code, dev_param.err_info.freq, dev_param.err_info.current, dev_param.err_info.op_mode);
+				param.err_info.code, param.err_info.freq, param.err_info.current, param.err_info.op_mode);
 	}
 }
 extern int REGEN_getDuty(void);
@@ -1321,7 +1321,7 @@ STATIC int dbg_showVersion(int argc, char *argv[])
 {
     if(argc >= 2) goto ver_err;
 
-    UARTprintf("HW ver %d.%d, FW ver %d.%d\n", dev_param.hw_ver_maj, dev_param.hw_ver_maj, DSP_FW_VER_MAJ, DSP_FW_VER_MIN);
+    UARTprintf("HW ver %d.%d, FW ver %d.%d\n", HW_VER_MAJ, HW_VER_MIN, DSP_FW_VER_MAJ, DSP_FW_VER_MIN);
 
     return 0;
 

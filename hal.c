@@ -482,11 +482,15 @@ void HAL_enableAdcInts(HAL_Handle handle)
 
 
   // enable the PIE interrupts associated with the ADC interrupts
+#ifdef SUPPORT_V08_HW
+  PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1HP);
+#else
 #ifdef SUPPORT_V0_HW
   // modified ByPark, ADC interrupt change(level 10 -> highest priority)
   PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1HP);
 #else
   PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1);
+#endif
 #endif
 
 
@@ -495,11 +499,15 @@ void HAL_enableAdcInts(HAL_Handle handle)
 
 
   // enable the cpu interrupt for ADC interrupts
+#ifdef SUPPORT_V08_HW
+  CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
+#else
 #ifdef SUPPORT_V0_HW
   // modified ByPark, CPU interrupt change(int 10 -> int 1)
   CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
 #else
   CPU_enableInt(obj->cpuHandle,CPU_IntNumber_10);
+#endif
 #endif
 
   return;
@@ -561,7 +569,7 @@ void HAL_enableTimer0Int(HAL_Handle handle)
 	CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
 
 	return;
-} // end of HAL_enablePwmInt() function
+} // end of HAL_enableTimer0Int() function
 #endif
 
 void HAL_setupFaults(HAL_Handle handle)

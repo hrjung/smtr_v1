@@ -57,6 +57,9 @@
 #define TRIP_REASON_ERR_CRC_TRIP	33
 
 #define TRIP_REASON_MAX				40
+////////////////////////////////////////////
+
+#define MAX_JUMP_FREQ_NUM	3
 
 #define OVER_CURRENT_INSTANT_VALUE	(10.0)
 #define OVER_CURRENT_COUNT_LIMIT	10
@@ -248,20 +251,6 @@ typedef struct
 
 } motor_param_st;
 
-typedef struct
-{
-	uint16_t 	nv_ver;
-	uint16_t	nv_size;
-	uint32_t	dev_type;	// model ID
-	uint16_t 	motor_type;
-	uint32_t 	serial_num;
-	uint16_t	gear_ratio;
-	uint16_t	hw_ver_maj;		// XX.xx
-	uint16_t	hw_ver_min;
-	trip_err_st	err_info;
-
-} dev_param_st;
-
 
 typedef struct
 {
@@ -271,6 +260,9 @@ typedef struct
 
 	protection_st	protect;
 	osc_damp_st		osc_damp;
+
+	uint16_t		gear_ratio;
+	trip_err_st		err_info;
 
 } inverter_param_st;
 
@@ -332,7 +324,7 @@ typedef struct
 } internal_status_st;
 
 
-extern dev_param_st	dev_param;
+//extern dev_param_st	dev_param;
 extern dev_const_st	dev_const;
 extern motor_param_st mtr;
 extern inverter_param_st param;

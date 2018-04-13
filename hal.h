@@ -105,7 +105,7 @@ extern "C" {
 //! \brief Defines the ADC reading of temperature sensor at reference temperature for compensation
 #define getRefTempOffset() (*(int16_t (*)(void))0x3D7EA2)()
 
-#ifdef SUPPORT_V0_HW_PWM
+#ifdef SUPPORT_V08_HW
 #define HAL_PWM_DBFED_CNT        (uint16_t)(4.0 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
 #define HAL_PWM_DBRED_CNT        (uint16_t)(4.0 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
 #else
@@ -237,11 +237,15 @@ static inline void HAL_acqAdcInt(HAL_Handle handle,const ADC_IntNumber_e intNumb
 
 
   // Acknowledge interrupt from PIE group 10 
+#ifdef SUPPORT_V08_HW
+  PIE_clearInt(obj->pieHandle,PIE_GroupNumber_1);
+#else
 #ifdef SUPPORT_V0_HW
   // modified ByPark, CPU interrupt changed to highest priority
   PIE_clearInt(obj->pieHandle,PIE_GroupNumber_1);
 #else
   PIE_clearInt(obj->pieHandle,PIE_GroupNumber_10);
+#endif
 #endif
 
   return;

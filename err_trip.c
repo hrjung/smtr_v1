@@ -80,25 +80,25 @@ int ERR_setTripFlagAtInitNV(int cause)
 
 int ERR_clearTripData(void)
 {
-	dev_param.err_info.code = 0;
-	dev_param.err_info.freq = 0;
-	dev_param.err_info.current = 0;
-	dev_param.err_info.op_mode = 0;
+	param.err_info.code = 0;
+	param.err_info.freq = 0;
+	param.err_info.current = 0;
+	param.err_info.op_mode = 0;
 
 	return 0;
 }
 
 int ERR_setTripInfo(int code)
 {
-	dev_param.err_info.code = code;
-	dev_param.err_info.freq = m_status.cur_freq;
-	dev_param.err_info.current = m_status.current;
-	dev_param.err_info.op_mode = m_status.status;
+	param.err_info.code = code;
+	param.err_info.freq = m_status.cur_freq;
+	param.err_info.current = m_status.current;
+	param.err_info.op_mode = m_status.status;
 
 	return 0;
 }
 
 int ERR_getCurrentErrCode(void)
 {
-	return dev_param.err_info.code;
+	return param.err_info.code;
 }

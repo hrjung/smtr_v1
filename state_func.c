@@ -334,7 +334,7 @@ void STA_setCurSpeed(float_t cur_spd)
 
 float_t STA_getCurSpeed(void)
 {
-	return m_status.cur_rpm/dev_param.gear_ratio;
+	return m_status.cur_rpm/param.gear_ratio;
 }
 
 float_t STA_getTargetFreq(void)
