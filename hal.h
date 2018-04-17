@@ -154,7 +154,8 @@ typedef enum
   HAL_Gpio_Relay=GPIO_Number_6,
   HAL_Gpio_Brake=GPIO_Number_7,
   HAL_Gpio_LED_G=GPIO_Number_8,  //!< GPIO pin number for ControlCARD LED 2
-  HAL_Gpio_LED_R=GPIO_Number_12   //!< GPIO pin number for ControlCARD LED 3
+  HAL_Gpio_LED_R=GPIO_Number_12,   //!< GPIO pin number for ControlCARD LED 3
+  HAL_Gpio_IPM_FAULT = GPIO_Number_31
 
 } HAL_LedNumber_e;
 #else

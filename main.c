@@ -2399,7 +2399,7 @@ void SetGpioInterrupt(void)
     CPU_enableGlobalInts(halHandle->cpuHandle);
 
     // set GPIO31 to XINT1
-    GPIO_setExtInt(halHandle->gpioHandle, GPIO_Number_31, CPU_ExtIntNumber_1);
+    GPIO_setExtInt(halHandle->gpioHandle, HAL_Gpio_IPM_FAULT, CPU_ExtIntNumber_1);
     PIE_setExtIntPolarity(halHandle->pieHandle, CPU_ExtIntNumber_1, PIE_ExtIntPolarity_FallingEdge);
 
     // enable CPU1 interrupt for XINT1
