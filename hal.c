@@ -845,7 +845,11 @@ void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
   // set the default current bias
  {
    uint_least8_t cnt;
+#ifdef SUPPORT_V08_HW
+   _iq bias = _IQ(0.0);
+#else
    _iq bias = _IQ12mpy(ADC_dataBias,_IQ(pUserParams->current_sf));
+#endif
    
    for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
      {

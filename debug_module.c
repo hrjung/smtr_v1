@@ -1492,17 +1492,6 @@ unsigned long b = 0xFFFFFFFE;
 //extern float MAIN_convert2InternalSpeedRef(int freq);
 //extern int MAIN_convert2Speed(float speed);
 extern void initParam(void);
-extern bool UTIL_readOverTemperatureWarning(void);
-extern bool UTIL_readOverTemperatureFault(void);
-// for print out what I want to see
-
-void UTIL_readGpio(void)
-{
-	UARTprintf("temp_warn = %d, temp_fault=%d\n", \
-			(int)UTIL_readOverTemperatureWarning(), \
-			(int)UTIL_readOverTemperatureFault());
-}
-
 
 #ifdef PWM_DUTY_TEST
 extern uint16_t gFlag_PwmTest;

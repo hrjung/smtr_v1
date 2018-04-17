@@ -151,8 +151,11 @@ typedef enum
 #ifdef SUPPORT_V08_HW
 typedef enum
 {
+  HAL_Gpio_Relay=GPIO_Number_6,
+  HAL_Gpio_Brake=GPIO_Number_7,
   HAL_Gpio_LED_G=GPIO_Number_8,  //!< GPIO pin number for ControlCARD LED 2
   HAL_Gpio_LED_R=GPIO_Number_12   //!< GPIO pin number for ControlCARD LED 3
+
 } HAL_LedNumber_e;
 #else
 #ifdef SUPPORT_V0_HW
@@ -582,38 +585,37 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
   _iq voltage_sf = HAL_getVoltageScaleFactor(handle);
 
 #ifdef SUPPORT_V08_HW
-  float_t f_val;
+//  float_t f_val;
 
 // convert V_I
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_1);
-  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
+  value = _IQ12mpy(value,current_sf) - _IQ(I_B_offset); // - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
   pAdcData->I.value[0] = value;
 
   // convert U_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_2);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[2];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[2] = -value;
+  pAdcData->V.value[2] = value;
 
   // convert W_I
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_3);
-  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
-  pAdcData->I.value[1] = value;
+  value = _IQ12mpy(value,current_sf) - _IQ(I_C_offset); // - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
+  pAdcData->I.value[1] = -value;
 
   // convert V_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_4);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[0];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[0] = -value;
+  pAdcData->V.value[0] = value;
 
  // convert Vdc
-  f_val = (float_t)ADC_readResult(obj->adcHandle,ADC_ResultNumber_5);
-  f_val = f_val*0.2702 - 67.071; // calculated
-  //f_val = f_val*0.2665 - 56.555; // measured
-  pAdcData->dcBus = _IQ(f_val/USER_IQ_FULL_SCALE_VOLTAGE_V);
+  value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_5);
+  value = _IQ12mpy(value,voltage_sf);
+  pAdcData->dcBus = value;
 
-  // convert W_V : hrjung : value = 0.000222*ADC - 0.000222*2048
+  // convert W_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_6);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[1];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[1] = -value;
+  pAdcData->V.value[1] = value;
 
   // convert IPM temperature
   pAdcData->ipm_temperature = ADC_readResult(obj->adcHandle,ADC_ResultNumber_7);

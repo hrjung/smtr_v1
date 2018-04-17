@@ -39,7 +39,7 @@
 //#define UNIT_TEST_ENABLED
 
 // for using CCS graph debug
-//#define SUPPORT_DEBUG_GRAPH
+#define SUPPORT_DEBUG_GRAPH
 
 // enable/disable terminal debug command at compile time
 #ifdef UNIT_TEST_ENABLED
@@ -51,7 +51,7 @@
 #define STATIC static
 // get ADC value to analyze I_u, I_v, V_u, V_v, V_w
 //#define SAMPLE_ADC_VALUE
-//#define PWM_DUTY_TEST
+#define PWM_DUTY_TEST
 #endif
 
 

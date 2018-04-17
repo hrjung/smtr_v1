@@ -100,7 +100,8 @@ extern "C" {
 //! \brief Hardware dependent, this should be based on the voltage sensing and scaling to the ADC input
 //#define USER_ADC_FULL_SCALE_VOLTAGE_V       (409.6)      // 409.6 hvkit_rev1p1 voltage scaling
 //#define USER_ADC_FULL_SCALE_VOLTAGE_V       (1140.0)
-#define USER_ADC_FULL_SCALE_VOLTAGE_V       (848.7)
+//#define USER_ADC_FULL_SCALE_VOLTAGE_V       (848.7)
+#define USER_ADC_FULL_SCALE_VOLTAGE_V       (933.5296)
 
 //! \brief Defines the voltage scale factor for the system
 //! \brief Compile time calculation for scale factor (ratio) used throughout the system
@@ -117,8 +118,8 @@ extern "C" {
 //! \brief The value that will be represented by the maximum ADC input (3.3V) and conversion (0FFFh)
 //! \brief Hardware dependent, this should be based on the current sensing and scaling to the ADC input
 //#define USER_ADC_FULL_SCALE_CURRENT_A        (19.89)     // 19.89 hvkit_rev1p1 current scaling
-#define USER_ADC_FULL_SCALE_CURRENT_A        (39.66)
-//#define USER_ADC_FULL_SCALE_CURRENT_A        (40.0)
+//#define USER_ADC_FULL_SCALE_CURRENT_A        (39.66)
+#define USER_ADC_FULL_SCALE_CURRENT_A        (49.7)
 
 //! \brief Defines the current scale factor for the system
 //! \brief Compile time calculation for scale factor (ratio) used throughout the system
@@ -149,10 +150,18 @@ extern "C" {
 //#define   I_A_offset    (0.9966602325)
 //#define   I_B_offset    (0.9960474968)
 //#define   I_C_offset    (0.997712791)
-#define   I_A_offset    (1.346306)
-#define   I_B_offset    (1.363306)
-//#define   I_C_offset    (1.333306)
-#define   I_C_offset    (0.002903)
+//for V0
+//#define   I_A_offset    (1.346306)
+//#define   I_B_offset    (1.363306)
+////#define   I_C_offset    (1.333306)
+//#define   I_C_offset    (0.002903)
+//for V0.8
+#define   I_A_offset    (0.0)
+#define   I_B_offset    (1.70)
+#define   I_C_offset    (1.68)
+//#define   I_A_offset    (0.0)
+//#define   I_B_offset    (1.65667)
+//#define   I_C_offset    (1.65667)
 
 //! \brief ADC voltage offsets for A, B, and C phases
 //! \brief One-time hardware dependent, though the calibration can be done at run-time as well
@@ -160,9 +169,14 @@ extern "C" {
 //#define   V_A_offset    (0.3384106159)
 //#define   V_B_offset    (0.3370528817)
 //#define   V_C_offset    (0.3377450705)
-#define   V_A_offset    (0.354)
-#define   V_B_offset    (0.354)
-#define   V_C_offset    (0.354)
+//for V0
+//#define   V_A_offset    (0.354)
+//#define   V_B_offset    (0.354)
+//#define   V_C_offset    (0.354)
+//for V0.8
+#define   V_A_offset    (0.0)
+#define   V_B_offset    (0.0)
+#define   V_C_offset    (0.0)
 #endif
 
 //! \brief CLOCKS & TIMERS
@@ -346,7 +360,8 @@ extern "C" {
 //! \brief Defines the analog voltage filter pole location, Hz
 //! \brief Must match the hardware filter for Vph
 //#define USER_VOLTAGE_FILTER_POLE_Hz  (372.5)   // 372.5, value for hvkit_rev1p1 hardware
-#define USER_VOLTAGE_FILTER_POLE_Hz  (360.2421)
+//#define USER_VOLTAGE_FILTER_POLE_Hz  (360.2421)
+#define USER_VOLTAGE_FILTER_POLE_Hz  (407.4478)
 
 //! \brief Defines the analog voltage filter pole location, rad/s
 //! \brief Compile time calculation from Hz to rad/s

@@ -109,9 +109,6 @@ protect_dc_st protect_dc;
 extern uint32_t secCnt;
 
 
-extern bool UTIL_readOverTemperatureWarning(void);
-extern bool UTIL_readOverTemperatureFault(void);
-
 extern float_t MAIN_getIave(void);
 extern void MAIN_readCurrent(void);
 extern int MAIN_isOverCurrent(void);
@@ -495,6 +492,7 @@ int OSC_setDampFilter(int value)
 
 int TEMP_monitorTemperature(void)
 {
+#if 0
 	static int temp_warn_logged=0, mtr_warn_logged=0;
 	uint16_t motor_temp;
 
@@ -522,7 +520,6 @@ int TEMP_monitorTemperature(void)
 		temp_warn_logged = 0;
 	}
 
-#if 0
 	ADC_readMotorTemperature(&motor_temp);
 	if(motor_temp > MOTOR_TEMPERATURE_LIMIT)
 	{

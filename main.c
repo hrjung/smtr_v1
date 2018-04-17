@@ -416,9 +416,10 @@ float_t MAIN_getIave(void)
 inline void MAIN_readCurrent(void)
 {
 	  // update instant current value
-	  internal_status.Iu_inst = _IQtoF(gAdcData.I.value[0])*USER_IQ_FULL_SCALE_CURRENT_A;
-	  internal_status.Iv_inst = _IQtoF(gAdcData.I.value[1])*USER_IQ_FULL_SCALE_CURRENT_A;
-	  internal_status.Iw_inst = _IQtoF(gAdcData.I.value[2])*USER_IQ_FULL_SCALE_CURRENT_A;
+	  internal_status.Iu_inst = _IQtoF(gAdcData.I.value[2])*USER_IQ_FULL_SCALE_CURRENT_A;
+	  internal_status.Iv_inst = _IQtoF(gAdcData.I.value[0])*USER_IQ_FULL_SCALE_CURRENT_A;
+	  internal_status.Iw_inst = _IQtoF(gAdcData.I.value[1])*USER_IQ_FULL_SCALE_CURRENT_A;
+
 
 	  if(internal_status.Iu_inst > 15.0) internal_status.Iu_inst = 15.0;
 	  else if(internal_status.Iu_inst < -15.0) internal_status.Iu_inst = -15.0;
@@ -439,7 +440,8 @@ int MAIN_getSampleCountLimit(void)
 #ifdef SUPPORT_USER_VARIABLE
 	return (int)(gUserParams.pwmPeriod_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
 #else
-	return (int)(USER_PWM_FREQ_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
+	return (int)(USER_PWM_FREQ_kHz*1000.0/(60.0*(float_t)I_RMS_SAMPLE_COUNT));
+	//return (int)(USER_PWM_FREQ_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
 #endif
 }
 
@@ -594,7 +596,7 @@ void MAIN_setCurrentFreq(void)
 #ifdef UNIT_TEST_ENABLED
 	return;
 #else
-	STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
+
 //	if(DRV_isVfControl())
 //		STA_setCurSpeed(spd_krpm);
 //	else
@@ -1165,12 +1167,14 @@ void main(void)
   datalogHandle = DATALOG_init(&datalog,sizeof(datalog));
 
   // Connect inputs of the datalog module
-  datalog.iptr[0] = (int32_t *)&gMotorVars.Rs_Ohm;		// datalogBuff[1]
-  datalog.iptr[1] = (int32_t *)&gMotorVars.RsOnLine_Ohm;	// datalogBuff[2]
-  datalog.iptr[2] = (int32_t *)&gAdcData.vdc_adc;		// datalogBuff[2]
+  datalog.iptr[0] = &gAdcData.I.value[0];		// datalogBuff[1]
+  datalog.iptr[1] = &gAdcData.I.value[1];	// datalogBuff[2]
+  //datalog.iptr[2] = &gAdcData.V.value[2];		// datalogBuff[2]
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
+
+  MAIN_initIarray();
 #endif
 
   // enable global interrupts
@@ -1247,7 +1251,7 @@ void main(void)
     // Waiting for enable system flag to be set
     while(!(gMotorVars.Flag_enableSys))
 	{
-        processProtection();
+        //processProtection();
 
         //TODO : should find correct location
         state_param.inv = STA_control();
@@ -1540,7 +1544,7 @@ void main(void)
 
 
         // protection
-        processProtection();
+        //processProtection();
 
         //DC Injection Brake
         DCIB_processBrakeSigHandler();
@@ -1790,7 +1794,7 @@ interrupt void mainISR(void)
 	  gPwmData.Tabc.value[1] = gPwmData_Value;
 	  gPwmData.Tabc.value[2] = gPwmData_Value;
   }
-#endif
+#else
 
   if( (DRV_isVfControl() && fabsf(temp_spd_ref) < 0.03) // 1Hz
 	  ) // ignore below 1Hz
@@ -1800,6 +1804,7 @@ interrupt void mainISR(void)
 	  gPwmData.Tabc.value[2] = 0.0;
 	  block_count++;
   }
+#endif
 
   //process PWM for DCI brake
   //MAIN_processDCBrake();
@@ -1865,8 +1870,6 @@ interrupt void mainISR(void)
   }
 #endif
 
-  MAIN_setCurrentFreq();
-
   // Irms
   //UTIL_testbit(1);
   if(MAIN_isSampleRequired())
@@ -1876,11 +1879,11 @@ interrupt void mainISR(void)
   }
   //UTIL_testbit(0);
 
-#if 0
-	internal_status.Vu_inst = _IQtoF(gAdcData.V.value[0])*USER_IQ_FULL_SCALE_VOLTAGE_V;
-	internal_status.Vv_inst = _IQtoF(gAdcData.V.value[1])*USER_IQ_FULL_SCALE_VOLTAGE_V;
-	internal_status.Vw_inst = _IQtoF(gAdcData.V.value[2])*USER_IQ_FULL_SCALE_VOLTAGE_V;
-
+#if 1
+  	internal_status.Vu_inst = _IQtoF(gAdcData.V.value[2])*USER_IQ_FULL_SCALE_VOLTAGE_V;
+	internal_status.Vv_inst = _IQtoF(gAdcData.V.value[0])*USER_IQ_FULL_SCALE_VOLTAGE_V;
+	internal_status.Vw_inst = _IQtoF(gAdcData.V.value[1])*USER_IQ_FULL_SCALE_VOLTAGE_V;
+#ifdef SAMPLE_ADC_VALUE
 	if(sample_type == V_UVW_SAMPLE_TYPE)
 		dbg_getSample(internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst);
 	  //dbg_getSample(gAdcData.v_adc[0], gAdcData.v_adc[1], gAdcData.v_adc[2]);
@@ -1888,8 +1891,9 @@ interrupt void mainISR(void)
 	if(sample_type == I_CURR_SAMPLE_TYPE)
 		dbg_getSample(internal_status.Iu_inst, internal_status.Iv_inst, internal_status.Iw_inst);
 #endif
+#endif
 
-#if 0
+#if 1
 	internal_status.Vdc_inst = _IQtoF(gAdcData.dcBus)*USER_IQ_FULL_SCALE_VOLTAGE_V;
 	internal_status.Vdc_lfp = _IQtoF(gVbus_lpf)*USER_IQ_FULL_SCALE_VOLTAGE_V;
 #ifdef SAMPLE_ADC_VALUE
@@ -1900,7 +1904,10 @@ interrupt void mainISR(void)
 	  gLEDcnt = 0;
 	}
 #endif
+#endif
 
+
+#if 0
 	internal_status.Vab_pu[0] = _IQtoF(Vab_pu.value[0]);
 	internal_status.Vab_pu[1] = _IQtoF(Vab_pu.value[1]);
 
@@ -1967,6 +1974,8 @@ void updateGlobalVariables_motor(CTRL_Handle handle)
 
   // get the speed estimate
   gMotorVars.Speed_krpm = EST_getSpeed_krpm(obj->estHandle);
+
+  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
 
   // get the real time speed reference coming out of the speed trajectory generator
   gMotorVars.SpeedTraj_krpm = _IQmpy(CTRL_getSpd_int_ref_pu(handle),EST_get_pu_to_krpm_sf(obj->estHandle));
@@ -2042,6 +2051,8 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle)
   MATH_vec2 Vab_in_pu, Iab_in_pu;
 
   gMotorVars.Speed_krpm = _IQ(temp_spd_ref);
+
+  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
 
   // get the controller state
   gMotorVars.CtrlState = CTRL_getState(handle);
@@ -2329,24 +2340,24 @@ void UTIL_testbitG(int on_off) // LD1
 
 void UTIL_setInitRelay(void)
 {
-	HAL_setGpioHigh(halHandle,(GPIO_Number_e)GPIO_Number_20);
+	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 1;
 }
 
 void UTIL_clearInitRelay(void)
 {
-	HAL_setGpioLow(halHandle,(GPIO_Number_e)GPIO_Number_20);
+	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 0;
 }
 
 void UTIL_setShaftBrake(void)
 {
-	HAL_setGpioHigh(halHandle,(GPIO_Number_e)GPIO_Number_23);
+	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_Brake);
 }
 
 void UTIL_releaseShaftBrake(void)
 {
-	HAL_setGpioLow(halHandle,(GPIO_Number_e)GPIO_Number_23);
+	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_Brake);
 }
 
 void UTIL_setScaleFactor(void)
@@ -2366,16 +2377,6 @@ uint16_t UTIL_setRegenPwmDuty(int duty)
 	user_pwm = HAL_writePwmDataRegen(halHandle, _IQ(pwm_duty));
 
 	return user_pwm;
-}
-
-bool UTIL_readOverTemperatureWarning(void)
-{
-	return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_21);
-}
-
-bool UTIL_readOverTemperatureFault(void)
-{
-	return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_25);
 }
 
 
