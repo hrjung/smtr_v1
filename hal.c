@@ -482,32 +482,23 @@ void HAL_enableAdcInts(HAL_Handle handle)
 
 
   // enable the PIE interrupts associated with the ADC interrupts
-#ifdef SUPPORT_V08_HW
-  PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1HP);
-#else
-#ifdef SUPPORT_V0_HW
+#ifdef SUPPORT_HW_COMMON
   // modified ByPark, ADC interrupt change(level 10 -> highest priority)
   PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1HP);
 #else
   PIE_enableAdcInt(obj->pieHandle,ADC_IntNumber_1);
 #endif
-#endif
-
 
   // enable the ADC interrupts
   ADC_enableInt(obj->adcHandle,ADC_IntNumber_1);
 
 
   // enable the cpu interrupt for ADC interrupts
-#ifdef SUPPORT_V08_HW
-  CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
-#else
-#ifdef SUPPORT_V0_HW
+#ifdef SUPPORT_HW_COMMON
   // modified ByPark, CPU interrupt change(int 10 -> int 1)
   CPU_enableInt(obj->cpuHandle,CPU_IntNumber_1);
 #else
   CPU_enableInt(obj->cpuHandle,CPU_IntNumber_10);
-#endif
 #endif
 
   return;
@@ -846,15 +837,21 @@ void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
  {
    uint_least8_t cnt;
 #ifdef SUPPORT_V08_HW
-   _iq bias = _IQ(0.0);
+   _iq bias[2] = {_IQ(I_B_offset), _IQ(I_C_offset)};
+
+   for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
+     {
+       HAL_setBias(handle,HAL_SensorType_Current,cnt,bias[cnt]);
+     }
 #else
    _iq bias = _IQ12mpy(ADC_dataBias,_IQ(pUserParams->current_sf));
-#endif
+
    
    for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
      {
        HAL_setBias(handle,HAL_SensorType_Current,cnt,bias);
      }
+#endif
  }
 
 
@@ -1730,11 +1727,13 @@ void HAL_setupPeripheralClks(HAL_Handle handle)
   CLK_enableSpiaClock(obj->clkHandle);
   CLK_enableSpibClock(obj->clkHandle);
 #else
+#ifdef SUPPORT_V0_HW
   CLK_enableScibClock(obj->clkHandle);
   CLK_enableI2cClock(obj->clkHandle);
 
   CLK_enableSpiaClock(obj->clkHandle);
   CLK_enableSpibClock(obj->clkHandle);
+#endif
 #endif
   
   CLK_enableTbClockSync(obj->clkHandle);

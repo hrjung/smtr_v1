@@ -1595,14 +1595,10 @@ interrupt void mainISR(void)
   if(++gLEDcnt >= (uint_least32_t)(USER_ISR_FREQ_Hz / LED_BLINK_FREQ_Hz))
 #endif
   {
-#ifdef SUPPORT_V08_HW
-		HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
-#else
-#ifdef SUPPORT_V0_HW
+#ifdef SUPPORT_HW_COMMON
 	    HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 #else
 	    HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED2);
-#endif
 #endif
 	    gLEDcnt = 0;
   }

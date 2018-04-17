@@ -589,7 +589,8 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
 
 // convert V_I
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_1);
-  value = _IQ12mpy(value,current_sf) - _IQ(I_B_offset); // - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
+  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
+  //value = _IQ12mpy(value,current_sf) - _IQ(I_B_offset);
   pAdcData->I.value[0] = value;
 
   // convert U_V
@@ -599,7 +600,8 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
 
   // convert W_I
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_3);
-  value = _IQ12mpy(value,current_sf) - _IQ(I_C_offset); // - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
+  value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
+  //value = _IQ12mpy(value,current_sf) - _IQ(I_C_offset);
   pAdcData->I.value[1] = -value;
 
   // convert V_V

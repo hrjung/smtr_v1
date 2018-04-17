@@ -60,7 +60,9 @@
 #define SAMYANG_1_5K_MOTOR
 //#define SAMYANG_2_2K_MOTOR
 
-//#define SUPPORT_V0_HW
+// COMMON feature of V0 and V0.8
+#define SUPPORT_HW_COMMON
+
 #define SUPPORT_V08_HW
 
 
