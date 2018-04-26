@@ -100,6 +100,7 @@ typedef struct _HAL_AdcData_t_
   uint_least16_t		v_adc[3];
   uint_least16_t		i_adc[2];
   uint_least16_t		ipm_temperature;
+  uint_least16_t		mtr_temperature;
   _iq		temp;
 #endif
 

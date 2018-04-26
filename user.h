@@ -93,6 +93,7 @@ extern "C" {
 //! \brief This value is also used to calculate the minimum flux value: USER_IQ_FULL_SCALE_VOLTAGE_V/USER_EST_FREQ_Hz/0.7
 //#define USER_IQ_FULL_SCALE_VOLTAGE_V      (450.0)   // 450.0 Example for hvkit_rev1p1 typical usage
 #define USER_IQ_FULL_SCALE_VOLTAGE_V      (935.0)
+//#define USER_IQ_FULL_SCALE_VOLTAGE_V      (1000.0)
 
 
 //! \brief Defines the maximum voltage at the input to the AD converter
@@ -111,8 +112,9 @@ extern "C" {
 //! \brief All currents are converted into (pu) based on the ratio to this value
 //! \brief WARNING: this value MUST be larger than the maximum current readings that you are expecting from the motor or the reading will roll over to 0, creating a control issue
 //#define USER_IQ_FULL_SCALE_CURRENT_A          (10.0)   // 10.0 Example for hvkit_rev1p1 typical usage
-#define USER_IQ_FULL_SCALE_CURRENT_A          (14.9058)   // 10.0 Example for hvkit_rev1p1 typical usage
-//#define USER_IQ_FULL_SCALE_CURRENT_A          (20.0)   // 10.0 Example for hvkit_rev1p1 typical usage
+//#define USER_IQ_FULL_SCALE_CURRENT_A          (14.9058)   // 10.0 Example for hvkit_rev1p1 typical usage
+#define USER_IQ_FULL_SCALE_CURRENT_A          (18.75)   // 10.0 Example for hvkit_rev1p1 typical usage
+
 
 //! \brief Defines the maximum current at the AD converter
 //! \brief The value that will be represented by the maximum ADC input (3.3V) and conversion (0FFFh)
@@ -126,17 +128,13 @@ extern "C" {
 #define USER_CURRENT_SF               ((float_t)((USER_ADC_FULL_SCALE_CURRENT_A)/(USER_IQ_FULL_SCALE_CURRENT_A)))
 
 
-#ifdef SUPPORT_V08_HW
-#define USER_NUM_CURRENT_SENSORS            (2)
-#else
-#ifdef SUPPORT_V0_HW_ADC
+#ifdef SUPPORT_HW_COMMON
 #define USER_NUM_CURRENT_SENSORS            (2)   // 3 Preferred setting for best performance across full speed range, allows for 100% duty cycle
 #else
 //! \brief Defines the number of current sensors used
 //! \brief Defined by the hardware capability present
 //! \brief May be (2) or (3)
 #define USER_NUM_CURRENT_SENSORS            (3)   // 3 Preferred setting for best performance across full speed range, allows for 100% duty cycle
-#endif
 #endif
 
 //! \brief Defines the number of voltage (phase) sensors
@@ -156,9 +154,11 @@ extern "C" {
 ////#define   I_C_offset    (1.333306)
 //#define   I_C_offset    (0.002903)
 //for V0.8
-#define   I_A_offset    (0.0)
-#define   I_B_offset    (1.70)
-#define   I_C_offset    (1.68)
+#define   I_A_offset    (1.34)	// V
+#define   I_B_offset    (1.325)  // W
+//#define   I_A_offset    (1.70)	// V
+//#define   I_B_offset    (1.68)  // W
+#define   I_C_offset    (0.0)  // U
 //#define   I_A_offset    (0.0)
 //#define   I_B_offset    (1.65667)
 //#define   I_C_offset    (1.65667)
@@ -174,9 +174,9 @@ extern "C" {
 //#define   V_B_offset    (0.354)
 //#define   V_C_offset    (0.354)
 //for V0.8
-#define   V_A_offset    (0.0)
-#define   V_B_offset    (0.0)
-#define   V_C_offset    (0.0)
+#define   V_A_offset    (0.284)  // V
+#define   V_B_offset    (0.282)  // W
+#define   V_C_offset    (0.284)  // U
 #endif
 
 //! \brief CLOCKS & TIMERS

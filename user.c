@@ -335,6 +335,7 @@ void USER_setParams(USER_Params *pUserParams)
   pUserParams->VF_freq_low = USER_MOTOR_FREQ_LOW;
   pUserParams->VF_freq_high = USER_MOTOR_FREQ_HIGH;
 
+//#define PWM_DEADBAND_LIMITATION  (1.0)
 #define PWM_DEADBAND_LIMITATION  (0.93)
 //#define PWM_DEADBAND_LIMITATION  (0.91)
 
@@ -344,7 +345,7 @@ void USER_setParams(USER_Params *pUserParams)
 #else
   pUserParams->VF_volt_max = ((USER_INPUT_VOLTAGE*1.35)/1.732051)*PWM_DEADBAND_LIMITATION;
 #endif
-  //pUserParams->VF_volt_min = 5.0;
+  //pUserParams->VF_volt_min = 20.0;
   pUserParams->VF_volt_min = (pUserParams->VF_volt_max*(USER_MOTOR_FREQ_LOW/USER_MOTOR_FREQ_HIGH));
 #else
   if(pmtr->input_voltage == 220) // standard x1.35+10.0

@@ -256,6 +256,8 @@ uint16_t p_count=0;
 uint16_t n_count=0;
 #endif
 
+_iq pwm_set[3], pwm_diff[3];
+
 #ifdef SAMPLE_ADC_VALUE
 #define I_SAMPLE_COUNT		100
 #define V_SAMPLE_COUNT		270
@@ -291,6 +293,8 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle);
 
 extern uint32_t secCnt;
 extern uint16_t MyModbusAddr;
+
+_iq c_factor=_IQ(1.00);
 
 void SetGpioInterrupt(void);
 // **************************************************************************
@@ -440,8 +444,10 @@ int MAIN_getSampleCountLimit(void)
 #ifdef SUPPORT_USER_VARIABLE
 	return (int)(gUserParams.pwmPeriod_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
 #else
-	return (int)(USER_PWM_FREQ_kHz*1000.0/(60.0*(float_t)I_RMS_SAMPLE_COUNT));
-	//return (int)(USER_PWM_FREQ_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
+	if(gFlag_PwmTest)
+		return (int)(USER_PWM_FREQ_kHz*1000.0/(60.0*(float_t)I_RMS_SAMPLE_COUNT));
+	else
+		return (int)(USER_PWM_FREQ_kHz*1000.0/(STA_getCurFreq()*(float_t)I_RMS_SAMPLE_COUNT));
 #endif
 }
 
@@ -690,6 +696,9 @@ void MAIN_setDeviceConstant(void)
 
 	internal_status.accel_resol = 0.0;
 	internal_status.decel_resol = 0.0;
+
+	internal_status.ipm_temp = 0.0;
+	internal_status.mtr_temp = 0.0;
 
 	internal_status.relay_enabled = 0;
 	internal_status.regen_enabled = 0;
@@ -1167,9 +1176,9 @@ void main(void)
   datalogHandle = DATALOG_init(&datalog,sizeof(datalog));
 
   // Connect inputs of the datalog module
-  datalog.iptr[0] = &gAdcData.I.value[0];		// datalogBuff[1]
-  datalog.iptr[1] = &gAdcData.I.value[1];	// datalogBuff[2]
-  //datalog.iptr[2] = &gAdcData.V.value[2];		// datalogBuff[2]
+  datalog.iptr[0] = &pwm_diff[0]; //&pwm_set[0];	// datalogBuff[1]
+  datalog.iptr[1] = &pwm_diff[1]; //&pwm_set[1];	// datalogBuff[2]
+  datalog.iptr[2] = &pwm_diff[2]; //&pwm_set[2];	// datalogBuff[2]
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1251,7 +1260,7 @@ void main(void)
     // Waiting for enable system flag to be set
     while(!(gMotorVars.Flag_enableSys))
 	{
-        //processProtection();
+        processProtection();
 
         //TODO : should find correct location
         state_param.inv = STA_control();
@@ -1263,6 +1272,8 @@ void main(void)
         //for DC monitoring
         gMotorVars.VdcBus_kV = _IQmpy(gAdcData.dcBus,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
   	    internal_status.Vdc_inst = _IQtoF(gAdcData.dcBus)*USER_IQ_FULL_SCALE_VOLTAGE_V;
+  	    internal_status.ipm_temp = gAdcData.ipm_temperature;
+  	    internal_status.mtr_temp = gAdcData.mtr_temperature;
 
 #ifdef SAMPLE_ADC_VALUE
   	    if(sample_type == V_DC_SAMPLE_TYPE)
@@ -1350,7 +1361,7 @@ void main(void)
                     else
                     {
 #ifdef SUPPORT_VF_CONTROL
-                      if(!DRV_isVfControl())
+                      //if(!DRV_isVfControl())
 #endif
                       {
 #ifdef SUPPORT_USER_VARIABLE
@@ -1544,7 +1555,7 @@ void main(void)
 
 
         // protection
-        //processProtection();
+        processProtection();
 
         //DC Injection Brake
         DCIB_processBrakeSigHandler();
@@ -1700,6 +1711,7 @@ interrupt void mainISR(void)
 			CTRL_computePhasor(controller_obj->angle_pu,&phasor);
 
 			// compute Valpha, Vbeta with angle and Vout
+			vs_freq.Vs_out = _IQmpy(vs_freq.Vs_out,c_factor);
 			Vab_pu.value[0] = _IQmpy(vs_freq.Vs_out,phasor.value[0]);
 			Vab_pu.value[1] = _IQmpy(vs_freq.Vs_out,phasor.value[1]);
 
@@ -1971,7 +1983,7 @@ void updateGlobalVariables_motor(CTRL_Handle handle)
   // get the speed estimate
   gMotorVars.Speed_krpm = EST_getSpeed_krpm(obj->estHandle);
 
-  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
+  //STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
 
   // get the real time speed reference coming out of the speed trajectory generator
   gMotorVars.SpeedTraj_krpm = _IQmpy(CTRL_getSpd_int_ref_pu(handle),EST_get_pu_to_krpm_sf(obj->estHandle));
@@ -2037,6 +2049,8 @@ void updateGlobalVariables_motor(CTRL_Handle handle)
   // Get the DC buss voltage
   //gMotorVars.VdcBus_kV = _IQdiv(gAdcData.dcBus,1000.0);
   gMotorVars.VdcBus_kV = _IQmpy(gAdcData.dcBus,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
+  internal_status.ipm_temp = gAdcData.ipm_temperature;
+  internal_status.mtr_temp = gAdcData.mtr_temperature;
 
   return;
 } // end of updateGlobalVariables_motor() function
@@ -2067,12 +2081,10 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle)
   gMotorVars.Is_A = _IQsqrt(_IQmpy(Iab_in_pu.value[0], Iab_in_pu.value[0]) + _IQmpy(Iab_in_pu.value[1], Iab_in_pu.value[1]));
   //gMotorVars.Is_A = _IQsqrt(_IQmpy(gMotorVars.Id_A, gMotorVars.Id_A) + _IQmpy(gMotorVars.Iq_A, gMotorVars.Iq_A));
 
-  // Get the DC buss voltage
-  //UTIL_testbit(1);
+  // Get the DC bus voltage
   gMotorVars.VdcBus_kV = _IQmpy(gAdcData.dcBus,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
-  //gMotorVars.VdcBus_kV = _IQdiv(gAdcData.dcBus,1000.0);
-  //temp_vdc = _IQmpy(gAdcData.temp,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
-  //UTIL_testbit(0);
+  internal_status.ipm_temp = gAdcData.ipm_temperature;
+  internal_status.mtr_temp = gAdcData.mtr_temperature;
 
   return;
 }
@@ -2375,6 +2387,15 @@ uint16_t UTIL_setRegenPwmDuty(int duty)
 	return user_pwm;
 }
 
+float_t UTIL_readIpmTemperature(void)
+{
+	return ((float_t)internal_status.ipm_temp * 0.0328 - 13.261);
+}
+
+float_t UTIL_readMotorTemperature(void)
+{
+	return (float_t)0.0;
+}
 
 __interrupt void xint1_isr(void)
 {
@@ -2399,7 +2420,7 @@ void SetGpioInterrupt(void)
     CPU_enableGlobalInts(halHandle->cpuHandle);
 
     // set GPIO31 to XINT1
-    GPIO_setExtInt(halHandle->gpioHandle, HAL_Gpio_IPM_FAULT, CPU_ExtIntNumber_1);
+    GPIO_setExtInt(halHandle->gpioHandle, (GPIO_Number_e)HAL_Gpio_IPM_FAULT, CPU_ExtIntNumber_1);
     PIE_setExtIntPolarity(halHandle->pieHandle, CPU_ExtIntNumber_1, PIE_ExtIntPolarity_FallingEdge);
 
     // enable CPU1 interrupt for XINT1

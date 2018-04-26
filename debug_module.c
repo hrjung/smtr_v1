@@ -74,6 +74,7 @@ typedef enum {
 	DBG_CMD_SHOW_TRIP,
 	DBG_CMD_DEL_TRIP,
 	DBG_CMD_SHOW_MONITOR,
+	DBG_CMD_SHOW_TEMP,
 
 	DBG_CMD_PROT_OVERLOAD,
 	DBG_CMD_PROT_REGEN,
@@ -142,17 +143,8 @@ extern void REGEN_end(void);
 extern void STA_printInvState(void);
 extern void DCIB_setFlag(void);
 extern void UTIL_clearInitRelay(void);
-extern void NV_setFWVersion(void);
-extern int NV_readItem(long pos, long *l_data, float_t *f_data);
-extern void NV_updateMotorParam(void);
-#if 0
-#define CRC_BUFF_LENGTH	256
-extern uint16_t NV_copyDevParam(unsigned char *buff);
-extern uint16_t NV_copyCtrlParam(unsigned char *buff);
-extern uint16_t NV_copyInverterParam(unsigned char *buff);
-extern uint16_t NV_copyErrorParam(unsigned char *buff);
-#endif
-extern uint32_t crc32(const unsigned char *buf, uint16_t size);
+extern float_t UTIL_readIpmTemperature(void);
+extern float_t UTIL_readMotorTemperature(void);
 /*******************************************************************************
  * LOCAL FUNCTIONS
  */
@@ -183,6 +175,7 @@ STATIC int dbg_processMotorParam(int argc, char *argv[]);
 STATIC int dbg_showTripInfo(int argc, char *argv[]);
 STATIC int dbg_removeTripInfo(int argc, char *argv[]);
 STATIC int dbg_showInverterStatus(int argc, char *argv[]);
+STATIC int dbg_showTempStatus(int argc, char *argv[]);
 
 STATIC int dbg_setOverload(int argc, char *argv[]);
 STATIC int dbg_setRegen(int argc, char *argv[]);
@@ -253,6 +246,7 @@ tCmdLineEntry g_sCmdTable[DBG_CMD_ENUM_MAX] =
 	{"rtrip", dbg_showTripInfo, " rtrip : display trip error"},
 	{"rmtrip", dbg_removeTripInfo, " rmtrip : delete trip error"},
 	{"invs", dbg_showInverterStatus, " invs : display inverter status"},
+	{"temp", dbg_showTempStatus, " temp : display temperature status"},
 
 	{"ovl", dbg_setOverload, " overload protect settings\n" 			\
 			"   ovl en flag(0, 1) : enable/disable overload trip\n"  		\
@@ -306,6 +300,7 @@ tCmdLineEntry g_sCmdTable[DBG_CMD_ENUM_MAX] =
 	{"rtrip", dbg_showTripInfo, " read trip info"},
 	{"rmtrip", dbg_removeTripInfo, " remove trip info"},
 	{"invs", dbg_showInverterStatus, " inverter status"},
+	{"temp", dbg_showTempStatus, " temperature status"},
 
 	{"ovl", dbg_setOverload, " overload protect"},
 	{"regen", dbg_setRegen, " Regen setting" },
@@ -390,17 +385,19 @@ STATIC void dbg_showTripData(void)
 	}
 }
 extern int REGEN_getDuty(void);
+extern _iq gVbus_lpf;
 STATIC void dbg_showMonitorParam(void)
 {
 	UARTprintf(" Inverter Status display\n");
 
+	float_t gOver = _IQtoF(_IQdiv(_IQ(1.0),gVbus_lpf));
 	UARTprintf("\t Iu: %f, Iv: %f, Iw: %f, DC voltage: %f\n", MAIN_getIu(), MAIN_getIv(), MAIN_getIw(), MAIN_getVdcBus());
 	UARTprintf("\t RMS Iu: %f, Iv: %f, Iw: %f\n", internal_status.Iu_rms, internal_status.Iv_rms, internal_status.Iw_rms);
 	UARTprintf("\t Volt: Vu: %f, Vv: %f, Vw: %f \n", internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst); //, MAIN_getDC_lfp());
 	UARTprintf("\t Volt: U-V: %f, V-W: %f, W-U: %f \n", (internal_status.Vu_inst - internal_status.Vv_inst), (internal_status.Vv_inst-internal_status.Vw_inst), (internal_status.Vw_inst-internal_status.Vu_inst));
 //	UARTprintf("\t input status: 0x%x, out status: 0x%x\n", (int)((mnt.dio_status>>16)&0x0F), (int)(mnt.dio_status&0x0F));
 	UARTprintf("\t Motor RPM: %f  Freq: %f  target %f dir=%d \n", STA_getCurSpeed(), m_status.cur_freq, m_status.target_freq, (int)m_status.direction);
-	UARTprintf("\t Motor status %d, accel: %f  decel: %f \n", m_status.status, m_status.acc_res, m_status.dec_res);
+	UARTprintf("\t Motor status %d, accel: %f  decel: %f gOver=%f \n", m_status.status, m_status.acc_res, m_status.dec_res, gOver);
 }
 
 STATIC void dbg_showOverloadParam(void)
@@ -1039,6 +1036,22 @@ STATIC int dbg_showInverterStatus(int argc, char *argv[])
 
 mnt_err:
 	UARTprintf("%s\n", g_sCmdTable[DBG_CMD_SHOW_MONITOR].pcHelp);
+	return 1;
+}
+
+STATIC int dbg_showTempStatus(int argc, char *argv[])
+{
+	float_t ipm_temp, mtr_temp;
+	if(argc > 1) goto temp_err;
+
+	ipm_temp = UTIL_readIpmTemperature();
+	mtr_temp = UTIL_readMotorTemperature();
+	UARTprintf("IPM temp = %f, Motor Temp = %f\n", ipm_temp, mtr_temp);
+
+	return 0;
+
+temp_err:
+	UARTprintf("%s\n", g_sCmdTable[DBG_CMD_SHOW_TEMP].pcHelp);
 	return 1;
 }
 

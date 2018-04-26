@@ -32,10 +32,11 @@
 #define TRIP_REASON_VDC_UNDER		2
 #define TRIP_REASON_VDC_OVER		3
 #define TRIP_REASON_OVERLOAD		4
-#define TRIP_REASON_OVER_TEMP_PWR	5
-#define TRIP_REASON_USER_STOP		6
-#define TRIP_REASON_EXTERNAL_TRIP	7
-#define TRIP_REASON_OVER_CURRENT	8
+#define TRIP_REASON_IPM_OVER_TEMP	5
+#define TRIP_REASON_MTR_OVER_TEMP	6
+#define TRIP_REASON_USER_STOP		7
+#define TRIP_REASON_EXTERNAL_TRIP	8
+#define TRIP_REASON_OVER_CURRENT	9
 
 #define TRIP_REASON_Iu_PHASE_MISS	10
 #define TRIP_REASON_Iv_PHASE_MISS	11
@@ -51,12 +52,8 @@
 #define TRIP_REASON_INPUT_VOLT_ERR	26
 #define TRIP_REASON_REGEN_CALC_ERR	27
 
-#define TRIP_REASON_DEV_CRC_TRIP	30
-#define TRIP_REASON_CTRL_CRC_TRIP	31
-#define TRIP_REASON_INV_CRC_TRIP	32
-#define TRIP_REASON_ERR_CRC_TRIP	33
 
-#define TRIP_REASON_MAX				40
+#define TRIP_REASON_MAX				30
 ////////////////////////////////////////////
 
 #define MAX_JUMP_FREQ_NUM	3
@@ -311,6 +308,9 @@ typedef struct
 	float_t		accel_resol;
 	float_t		decel_resol;
 
+	uint16_t 	ipm_temp;
+	uint16_t 	mtr_temp;
+
 	uint16_t	relay_enabled;
 	uint16_t	regen_enabled;
 	uint16_t 	trip_happened;
@@ -355,5 +355,7 @@ extern void UTIL_testbit(int on_off);
 extern void UTIL_testbitG(int on_off);
 
 extern uint16_t UTIL_setRegenPwmDuty(int duty);
+extern float_t UTIL_readIpmTemperature(void);
+extern float_t UTIL_readMotorTemperature(void);
 
 #endif /* INV_PARAM_H_ */

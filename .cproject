@@ -180,7 +180,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="F28069F_ram_lnk.cmd|2806xRevB_IQmath_BootROMSymbols_fpu32.lib|test_fast_secure_flash.cmd|ctrlUser.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="temperature.c|F28069F_ram_lnk.cmd|2806xRevB_IQmath_BootROMSymbols_fpu32.lib|test_fast_secure_flash.cmd|ctrlUser.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

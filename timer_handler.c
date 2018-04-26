@@ -66,18 +66,8 @@ timer_handler_st time_sig[MAX_TIMER_TSIG];
  * EXTERNS
  */
 extern HAL_Handle halHandle;
-extern int needSioAccess[];
 
-// **************************************************************************
-// definition needed for MODBUS
-// **************************************************************************
-extern tBoolean g_bNewCmd;
-extern tBoolean receiveFlag;
-extern tBoolean transmitDoneFlag;
-extern uint16_t transmitCnt;
-extern uint16_t frameCount;
-extern uint16_t MyModbusAddr;
-extern tBoolean g_bMODBUSNewCmd;
+
 /*
  *  ======== local function ========
  */

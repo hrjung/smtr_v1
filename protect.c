@@ -33,7 +33,8 @@
 #define TRIP_TIME_WARN_MAX	30
 #define TRIP_TIME_TRIP_MAX	60
 
-#define MOTOR_TEMPERATURE_LIMIT	0x3F00
+#define IPM_TEMPERATURE_LIMIT	(80.0)
+#define MOTOR_TEMPERATURE_LIMIT	(50.0)
 
 #define REGEN_RESISTANCE_VALUE_MIN	(150.0)
 #define REGEN_RESISTANCE_VALUE_MAX	(500.0)
@@ -390,7 +391,7 @@ int REGEN_process(float_t dc_volt)
 	{
 		if(dc_volt > protect_dc.dc_volt_init_relay_on)
 		{
-//			UTIL_setInitRelay();
+			UTIL_setInitRelay();
 //			UARTprintf("Relay on at Vdc %f\n", dc_volt);
 			under_flag=0; //initialize
 			//off_flag=0; //initialize
@@ -492,47 +493,30 @@ int OSC_setDampFilter(int value)
 
 int TEMP_monitorTemperature(void)
 {
-#if 0
-	static int temp_warn_logged=0, mtr_warn_logged=0;
-	uint16_t motor_temp;
+	float_t ipm_temp, mtr_temp;
+	static ipm_status=0, mtr_status=0;
 
-	ovTempWarn = UTIL_readOverTemperatureWarning();
-	if(ovTempWarn)
+	ipm_temp = UTIL_readIpmTemperature();
+	if(ipm_temp > IPM_TEMPERATURE_LIMIT)
 	{
-		if(temp_warn_logged == 0) // one shot
+		ERR_setTripFlag(TRIP_REASON_IPM_OVER_TEMP);
+		if(ipm_status == 0)
 		{
-			// TODO : write warning error at log
-			temp_warn_logged = 1;
-			UARTprintf(" Temp Warning ! warn=%d fault=%d\n", ovTempWarn, ovTempFault);
+			UARTprintf("IPM over temperature %f\n", ipm_temp);
+			ipm_status = 1;
 		}
-		ovTempFault = UTIL_readOverTemperatureFault();
-		if(ovTempFault)
-		{
-			// TODO : write warning error at log, stop inverter
-			//
-			ERR_setTripFlag(TRIP_REASON_OVER_TEMP_PWR);
-			UARTprintf(" Temp Fault ! warn=%d fault=%d\n", ovTempWarn, ovTempFault);
-			return 1;
-		}
-	}
-	else
-	{
-		temp_warn_logged = 0;
 	}
 
-	ADC_readMotorTemperature(&motor_temp);
-	if(motor_temp > MOTOR_TEMPERATURE_LIMIT)
+	mtr_temp = UTIL_readMotorTemperature();
+	if(mtr_temp > MOTOR_TEMPERATURE_LIMIT)
 	{
-		if(mtr_warn_logged) // one shot
+		ERR_setTripFlag(TRIP_REASON_MTR_OVER_TEMP);
+		if(mtr_status == 0)
 		{
-			UARTprintf(" Motor Temp Fault ! temp=%d\n", motor_temp);
-			mtr_warn_logged = 1;
+			UARTprintf("Motor over temperature %f\n", mtr_temp);
+			mtr_status = 1;
 		}
-		return 1;
 	}
-	else
-		mtr_warn_logged = 0;
-#endif
 
 	return 0;
 }
@@ -602,7 +586,7 @@ int processProtection(void)
 
 	if( REGEN_process(MAIN_getVdcBus()) ) MAIN_disableSystem();
 
-	//TEMP_monitorTemperature(); // Power module temperature check
+	TEMP_monitorTemperature(); // Power module temperature check
 
 
 	return 0;

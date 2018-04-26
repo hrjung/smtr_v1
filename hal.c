@@ -837,7 +837,7 @@ void HAL_setParams(HAL_Handle handle,const USER_Params *pUserParams)
  {
    uint_least8_t cnt;
 #ifdef SUPPORT_V08_HW
-   _iq bias[2] = {_IQ(I_B_offset), _IQ(I_C_offset)};
+   _iq bias[2] = {_IQ(I_A_offset), _IQ(I_B_offset)};
 
    for(cnt=0;cnt<HAL_getNumCurrentSensors(handle);cnt++)
      {
@@ -974,6 +974,11 @@ void HAL_setupAdcs(HAL_Handle handle)
   ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_7,ADC_SocChanNumber_A6);
   ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_7,ADC_SocTrigSrc_EPWM1_ADCSOCA);
   ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_7,ADC_SocSampleDelay_9_cycles);
+
+  // Motor Temperature
+  ADC_setSocChanNumber(obj->adcHandle,ADC_SocNumber_8,ADC_SocChanNumber_B5);
+  ADC_setSocTrigSrc(obj->adcHandle,ADC_SocNumber_8,ADC_SocTrigSrc_EPWM1_ADCSOCA);
+  ADC_setSocSampleDelay(obj->adcHandle,ADC_SocNumber_8,ADC_SocSampleDelay_9_cycles);
 
 #else
 #ifdef SUPPORT_V0_HW

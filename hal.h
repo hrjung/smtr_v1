@@ -241,15 +241,11 @@ static inline void HAL_acqAdcInt(HAL_Handle handle,const ADC_IntNumber_e intNumb
 
 
   // Acknowledge interrupt from PIE group 10 
-#ifdef SUPPORT_V08_HW
-  PIE_clearInt(obj->pieHandle,PIE_GroupNumber_1);
-#else
-#ifdef SUPPORT_V0_HW
+#ifdef SUPPORT_HW_COMMON
   // modified ByPark, CPU interrupt changed to highest priority
   PIE_clearInt(obj->pieHandle,PIE_GroupNumber_1);
 #else
   PIE_clearInt(obj->pieHandle,PIE_GroupNumber_10);
-#endif
 #endif
 
   return;
@@ -559,10 +555,13 @@ static inline void HAL_initIntVectorTable(HAL_Handle handle)
   pie->TINT0 = &timer0ISR; //hrjung add for timer0 interrupt
 #endif
 
-  // original
+
+#ifdef SUPPORT_HW_COMMON
   // modified ByPark, ISR handler is registered to ADCINT1_HP form ADCINT1
-  //pie->ADCINT1 = &mainISR;
   pie->ADCINT1_HP = &mainISR;
+#else
+  pie->ADCINT1 = &mainISR; // original
+#endif
 
   DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
@@ -592,23 +591,23 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_1);
   value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[0];      // divide by 2^numAdcBits = 2^12
   //value = _IQ12mpy(value,current_sf) - _IQ(I_B_offset);
-  pAdcData->I.value[0] = value;
+  pAdcData->I.value[0] = -value;
 
   // convert U_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_2);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[2];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[2] = value;
+  pAdcData->V.value[2] = -value;
 
   // convert W_I
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_3);
   value = _IQ12mpy(value,current_sf) - obj->adcBias.I.value[1];      // divide by 2^numAdcBits = 2^12
   //value = _IQ12mpy(value,current_sf) - _IQ(I_C_offset);
-  pAdcData->I.value[1] = -value;
+  pAdcData->I.value[1] = value;
 
   // convert V_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_4);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[0];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[0] = value;
+  pAdcData->V.value[0] = -value;
 
  // convert Vdc
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_5);
@@ -618,10 +617,13 @@ static inline void HAL_readAdcData(HAL_Handle handle,HAL_AdcData_t *pAdcData)
   // convert W_V
   value = (_iq)ADC_readResult(obj->adcHandle,ADC_ResultNumber_6);
   value = _IQ12mpy(value,voltage_sf) - obj->adcBias.V.value[1];      // divide by 2^numAdcBits = 2^12
-  pAdcData->V.value[1] = value;
+  pAdcData->V.value[1] = -value;
 
   // convert IPM temperature
   pAdcData->ipm_temperature = ADC_readResult(obj->adcHandle,ADC_ResultNumber_7);
+
+  // convert Motor temperature
+  pAdcData->mtr_temperature = ADC_readResult(obj->adcHandle,ADC_ResultNumber_8);
 
   // U_I calculation
   pAdcData->I.value[2] = -(pAdcData->I.value[0] + pAdcData->I.value[1]);
@@ -1294,6 +1296,7 @@ extern float_t pwm_value, pwm_value_neg, pwm_value_sat;
 extern int sample_type;
 extern void dbg_getSample(float_t val1, float_t val2, float_t val3);
 #endif
+extern _iq pwm_set[3], pwm_diff[3];
 //! \brief     Writes PWM data to the PWM comparators for motor control
 //! \param[in] handle    The hardware abstraction layer (HAL) handle
 //! \param[in] pPwmData  The pointer to the PWM data
@@ -1321,7 +1324,8 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
       else  pwmData_sat = pwmData_neg;
 #else
       //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.5),_IQ(-0.5));
-      pwmData_sat = _IQsat(pwmData_neg,_IQ(0.45),_IQ(-0.45));  //0.5->0.45->0.44 (20171108)
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.47),_IQ(-0.47));   //V0.8
+      pwmData_sat = _IQsat(pwmData_neg,_IQ(0.45),_IQ(-0.45)); //V0 : 0.5->0.45->0.44 (20171108)
       //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.43),_IQ(-0.43)); // for over 12kHz PWM frequency
 #endif
       pwmData_sat_dc = pwmData_sat + _IQ(0.5);
@@ -1331,6 +1335,7 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
       // write the PWM data
       PWM_write_CmpA(obj->pwmHandle[cnt],value_sat);
 
+      pwm_set[cnt] = pwmData_sat;
 #if 0
       fvalue_sat[cnt] = (float_t)value_sat;
    	  if(value_sat == 0)
@@ -1342,6 +1347,10 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
    	  }
 #endif
     }
+
+    pwm_diff[0] = pwm_set[0] - pwm_set[1];
+    pwm_diff[1] = pwm_set[1] - pwm_set[2];
+    pwm_diff[2] = pwm_set[2] - pwm_set[0];
 
 #ifdef SAMPLE_ADC_VALUE
 //  pwm_val = _IQtoF(pPwmData->Tabc.value[2]);
