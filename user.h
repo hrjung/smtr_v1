@@ -92,6 +92,7 @@ extern "C" {
 //! \brief It is recommended to start with a value ~3x greater than the USER_ADC_FULL_SCALE_VOLTAGE_V and increase to 4-5x if scenarios where a Bemf calculation may exceed these limits
 //! \brief This value is also used to calculate the minimum flux value: USER_IQ_FULL_SCALE_VOLTAGE_V/USER_EST_FREQ_Hz/0.7
 //#define USER_IQ_FULL_SCALE_VOLTAGE_V      (450.0)   // 450.0 Example for hvkit_rev1p1 typical usage
+//#define USER_IQ_FULL_SCALE_VOLTAGE_V      (850.0)
 #define USER_IQ_FULL_SCALE_VOLTAGE_V      (935.0)
 //#define USER_IQ_FULL_SCALE_VOLTAGE_V      (1000.0)
 
@@ -258,12 +259,14 @@ extern "C" {
 #ifndef USE_SUPPORT_USER_VARIABLE
 //! \brief Defines the number of controller clock ticks per speed controller clock tick
 //! \brief Relationship of controller clock rate to speed loop rate
-#define USER_NUM_CTRL_TICKS_PER_SPEED_TICK  (4)   // 15 Typical to match PWM, ex: 15KHz PWM, controller, and current loop, 1KHz speed loop
+//#define USER_NUM_CTRL_TICKS_PER_SPEED_TICK  (8)   // 15 Typical to match PWM, ex: 15KHz PWM, controller, and current loop, 1KHz speed loop
+#define USER_NUM_CTRL_TICKS_PER_SPEED_TICK   ((int)USER_PWM_FREQ_kHz)
 
 //! \brief Defines the number of controller clock ticks per trajectory clock tick
 //! \brief Relationship of controller clock rate to trajectory loop rate
 //! \brief Typically the same as the speed rate
-#define USER_NUM_CTRL_TICKS_PER_TRAJ_TICK   (4)   // 15 Typical to match PWM, ex: 10KHz controller & current loop, 1KHz speed loop, 1 KHz Trajectory
+//#define USER_NUM_CTRL_TICKS_PER_TRAJ_TICK   (8)   // 15 Typical to match PWM, ex: 10KHz controller & current loop, 1KHz speed loop, 1 KHz Trajectory
+#define USER_NUM_CTRL_TICKS_PER_TRAJ_TICK   ((int)USER_PWM_FREQ_kHz)
 
 //! \brief Defines the controller frequency, Hz
 //! \brief Compile time calculation
@@ -417,6 +420,7 @@ extern "C" {
 #define USER_MOTOR_Ls_d                 (0.013955)
 #define USER_MOTOR_Ls_q                 USER_MOTOR_Ls_d
 #define USER_MOTOR_RATED_FLUX           (0.8165*380.0/60.0)
+//#define USER_MOTOR_RATED_FLUX           (0.8165*700.0/60.0)  // for PWM_Hz=3.0kHz
 #define USER_MOTOR_MAGNETIZING_CURRENT  (2.8284) // 2.0*sqrt(2)
 //#define USER_MOTOR_MAGNETIZING_CURRENT  (1.514201)
 #define USER_MOTOR_RES_EST_CURRENT      (1.0)

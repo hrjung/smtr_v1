@@ -189,7 +189,7 @@ FILTER_SO_Handle gVbusFilterHandle;
 
 _iq gOneOverDcBus;
 
-//#define VOLTAGE_FILTER_BETA (USER_DCBUS_POLE_rps/(float_t)USER_CTRL_FREQ_Hz)
+#define VOLTAGE_FILTER_BETA (USER_DCBUS_POLE_rps/(float_t)USER_CTRL_FREQ_Hz)
 #endif
 
 #ifdef SUPPORT_FIELD_WEAKENING
@@ -778,11 +778,11 @@ void initParam(void)
 	// default ctrl setting
 	param.ctrl.value = 10.0;
 
-//	FREQ_setJumpFreqRange(0, 20.0, 30.0);
+//	FREQ_setJumpFreqRange(0, 20.0, 50.0);
 //	FREQ_setJumpFreqRange(1, 40.0, 50.0);
 
-	DRV_setAccelTime(10.0); // 10.0 sec
-	DRV_setDecelTime(10.0);
+	DRV_setAccelTime(5.0); // 10.0 sec
+	DRV_setDecelTime(5.0);
 
 	DRV_enableVfControl(); //default
 	param.ctrl.foc_torque_limit = 180.0;
@@ -1135,12 +1135,20 @@ void main(void)
   VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
 
   {
+#if 0
 	  float_t	voltage_filter_beta = (USER_DCBUS_POLE_rps/(float_t)gUserParams.ctrlFreq_Hz);
-     _iq a1 = _IQ((voltage_filter_beta - 2.0)/(voltage_filter_beta + 2.0));
+	 _iq a1 = _IQ((voltage_filter_beta - 2.0)/(voltage_filter_beta + 2.0));
+	 _iq a2 = _IQ(0.0);
+	 _iq b0 = _IQ(voltage_filter_beta/(voltage_filter_beta + 2.0));
+	 _iq b1 = _IQ(voltage_filter_beta/(voltage_filter_beta + 2.0));
+	 _iq b2 = _IQ(0.0);
+#else
+     _iq a1 = _IQ((VOLTAGE_FILTER_BETA - 2.0)/(VOLTAGE_FILTER_BETA + 2.0));
      _iq a2 = _IQ(0.0);
-     _iq b0 = _IQ(voltage_filter_beta/(voltage_filter_beta + 2.0));
-     _iq b1 = _IQ(voltage_filter_beta/(voltage_filter_beta + 2.0));
+     _iq b0 = _IQ(VOLTAGE_FILTER_BETA/(VOLTAGE_FILTER_BETA + 2.0));
+     _iq b1 = _IQ(VOLTAGE_FILTER_BETA/(VOLTAGE_FILTER_BETA + 2.0));
      _iq b2 = _IQ(0.0);
+#endif
 
 	  gVbusFilterHandle = FILTER_SO_init(&(gVbusFilter),sizeof(gVbusFilter));
 
@@ -1176,9 +1184,9 @@ void main(void)
   datalogHandle = DATALOG_init(&datalog,sizeof(datalog));
 
   // Connect inputs of the datalog module
-  datalog.iptr[0] = &pwm_diff[0]; //&pwm_set[0];	// datalogBuff[1]
-  datalog.iptr[1] = &pwm_diff[1]; //&pwm_set[1];	// datalogBuff[2]
-  datalog.iptr[2] = &pwm_diff[2]; //&pwm_set[2];	// datalogBuff[2]
+  datalog.iptr[0] = &gAdcData.V.value[0]; //&pwm_set[0];	// datalogBuff[1]
+  datalog.iptr[1] = &gAdcData.I.value[0]; //&pwm_set[1];	// datalogBuff[2]
+  datalog.iptr[2] = &gPwmData.Tabc.value[0]; //&pwm_set[2];	// datalogBuff[2]
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1286,6 +1294,9 @@ void main(void)
 //  	    	UARTprintf("Trip happened %d\n", internal_status.trip_happened);
 //  		}
 	}
+
+//	gMotorVars.Kp_Idq = _IQ(0.35166); // for PWM = 4kHz
+//	gMotorVars.Ki_Idq = _IQ(0.044786);
 
 #ifdef SUPPORT_FIELD_WEAKENING
     gMotorVars.Flag_enableFieldWeakening = true;
@@ -1493,17 +1504,22 @@ void main(void)
               // initialize the watch window kp and ki current values with pre-calculated values
               gMotorVars.Kp_Idq = CTRL_getKp(ctrlHandle,CTRL_Type_PID_Id);
               gMotorVars.Ki_Idq = CTRL_getKi(ctrlHandle,CTRL_Type_PID_Id);
+
+              //hrjung move from below #if 0
+              // initialize the watch window kp and ki values with pre-calculated values
+              gMotorVars.Kp_spd = CTRL_getKp(ctrlHandle,CTRL_Type_PID_spd);
+              gMotorVars.Ki_spd = CTRL_getKi(ctrlHandle,CTRL_Type_PID_spd);
             }
 
           }
         else
           {
             Flag_Latch_softwareUpdate = true;
-
+#if 0
             // initialize the watch window kp and ki values with pre-calculated values
             gMotorVars.Kp_spd = CTRL_getKp(ctrlHandle,CTRL_Type_PID_spd);
             gMotorVars.Ki_spd = CTRL_getKi(ctrlHandle,CTRL_Type_PID_spd);
-
+#endif
 
             // the estimator sets the maximum current slope during identification
             gMaxCurrentSlope = EST_getMaxCurrentSlope_pu(obj->estHandle);
@@ -1641,7 +1657,8 @@ interrupt void mainISR(void)
 	gVbus_lpf = FILTER_SO_run_form_1(gVbusFilterHandle,gAdcData.dcBus);
 
 	//gOneOverDcBus = _IQdiv(_IQ(1.0),gVbus_lpf);
-	gOneOverDcBus = _IQ(1.626); //_IQ(2.827);//_IQ(1.626); // _IQ(2.896);
+	//gOneOverDcBus = _IQ(1.3);
+	gOneOverDcBus = _IQ(1.8); //_IQ(1.626); //_IQ(2.827);//_IQ(1.626); // _IQ(2.896);
 
 	// run the controller
 	uint_least16_t count_isr = CTRL_getCount_isr(ctrlHandle);
@@ -2395,6 +2412,12 @@ float_t UTIL_readIpmTemperature(void)
 float_t UTIL_readMotorTemperature(void)
 {
 	return (float_t)0.0;
+}
+
+void MAIN_showPidGain(void)
+{
+	UARTprintf(" SPD ki=%f, kp=%f \n", _IQtoF(gMotorVars.Ki_spd), _IQtoF(gMotorVars.Kp_spd));
+	UARTprintf(" Idq ki=%f, kp=%f \n", _IQtoF(gMotorVars.Ki_Idq), _IQtoF(gMotorVars.Kp_Idq));
 }
 
 __interrupt void xint1_isr(void)

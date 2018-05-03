@@ -336,8 +336,8 @@ void USER_setParams(USER_Params *pUserParams)
   pUserParams->VF_freq_high = USER_MOTOR_FREQ_HIGH;
 
 //#define PWM_DEADBAND_LIMITATION  (1.0)
-#define PWM_DEADBAND_LIMITATION  (0.93)
-//#define PWM_DEADBAND_LIMITATION  (0.91)
+#define PWM_DEADBAND_LIMITATION  (0.95)
+//#define PWM_DEADBAND_LIMITATION  (0.93)
 
 #if 1
 #ifdef SUPPORT_USER_VARIABLE

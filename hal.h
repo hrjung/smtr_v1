@@ -1324,9 +1324,10 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
       else  pwmData_sat = pwmData_neg;
 #else
       //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.5),_IQ(-0.5));
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.48),_IQ(-0.48)); // for V0.8 deadband 3us
       //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.47),_IQ(-0.47));   //V0.8
       pwmData_sat = _IQsat(pwmData_neg,_IQ(0.45),_IQ(-0.45)); //V0 : 0.5->0.45->0.44 (20171108)
-      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.43),_IQ(-0.43)); // for over 12kHz PWM frequency
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.41),_IQ(-0.41)); // for over 12kHz PWM frequency
 #endif
       pwmData_sat_dc = pwmData_sat + _IQ(0.5);
       value = _IQmpy(pwmData_sat_dc, period);

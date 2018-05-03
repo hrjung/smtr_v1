@@ -136,6 +136,7 @@ extern float_t MAIN_getIw(void);
 extern float_t MAIN_getIave(void);
 #endif
 extern float_t MAIN_getDC_lfp(void);
+extern void MAIN_showPidGain(void);
 
 extern void REGEN_start(void);
 extern void REGEN_end(void);
@@ -424,39 +425,21 @@ STATIC int dbg_setFreq(int argc, char *argv[])
 	int result;
 	uint16_t value;
 	float_t f_value;
-	int cmd;
+	//int cmd;
 
-    if(argc != 2 && argc != 3) goto freq_err;
+    if(argc != 2) goto freq_err;
 
-	if(strcmp(argv[1], "main") == 0)
+	value = (uint16_t)atoi(argv[1]);
+	f_value = (float_t)(value/FREQ_INPUT_RESOLUTION);
+	if(f_value > MIN_FREQ_VALUE && f_value < MAX_FREQ_VALUE)
 	{
-		if(argc == 3)
-		{
-			value = (uint16_t)atoi(argv[2]);
-			cmd = FREQ_MAIN;
-		}
-		else
-			goto freq_err;
-	}
-	else if(strcmp(argv[1], "show") == 0)
-	{
-		dbg_showFreqSettings();
-		return 0;
+		result = FREQ_setFreqValue(f_value);
+		UARTprintf("set frequency=%f, result=%s\n", f_value, res_str[result]);
+		UARTprintf("resolution acc_res=%f, dec_res=%f\n", m_status.acc_res, m_status.dec_res);
 	}
 	else
 	{
 		goto freq_err;
-	}
-
-
-	switch(cmd)
-	{
-	case FREQ_MAIN :
-		f_value = (float_t)(value/FREQ_INPUT_RESOLUTION);
-	    result = FREQ_setFreqValue(f_value);
-	    UARTprintf("set frequency=%f, result=%s\n", f_value, res_str[result]);
-	    UARTprintf("resolution acc_res=%f, dec_res=%f\n", m_status.acc_res, m_status.dec_res);
-		break;
 	}
 
     return 0;
@@ -1613,6 +1596,10 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     	UARTprintf(" Iu rms =%f \n", internal_status.Iu_rms);
     	for(i=0; i<I_RMS_SAMPLE_COUNT; i++)
     		UARTprintf(" int_Iu %f \n", array_Iu[i]);
+    }
+    else if(index == 'k')
+    {
+    	MAIN_showPidGain();
     }
     else if(index == 't')
     {
