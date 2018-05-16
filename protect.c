@@ -494,7 +494,7 @@ int OSC_setDampFilter(int value)
 int TEMP_monitorTemperature(void)
 {
 	float_t ipm_temp, mtr_temp;
-	static ipm_status=0, mtr_status=0;
+	static int ipm_status=0, mtr_status=0;
 
 	ipm_temp = UTIL_readIpmTemperature();
 	if(ipm_temp > IPM_TEMPERATURE_LIMIT)

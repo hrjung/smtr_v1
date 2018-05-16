@@ -340,12 +340,6 @@ STATIC int dbg_processHelp(int argc, char *argv[])
     return 0;
 }
 
-STATIC void dbg_showFreqSettings(void)
-{
-	UARTprintf(" Frequency Settings\n");
-	UARTprintf("\t value : "); UARTprintf("%f ", param.ctrl.value); UARTprintf("\n");
-}
-
 STATIC void dbg_showAccelTimeSetting(void)
 {
 	UARTprintf(" Accel/Decel time Settings\n");

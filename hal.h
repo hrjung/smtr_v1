@@ -106,8 +106,8 @@ extern "C" {
 #define getRefTempOffset() (*(int16_t (*)(void))0x3D7EA2)()
 
 #ifdef SUPPORT_V08_HW
-#define HAL_PWM_DBFED_CNT        (uint16_t)(4.0 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
-#define HAL_PWM_DBRED_CNT        (uint16_t)(4.0 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
+#define HAL_PWM_DBFED_CNT        (uint16_t)(1.8 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
+#define HAL_PWM_DBRED_CNT        (uint16_t)(1.8 * (float_t)USER_SYSTEM_FREQ_MHz)            // 4->5 usec
 #else
 //! \brief Defines the PWM deadband falling edge delay count (system clocks)
 //!
@@ -1323,10 +1323,10 @@ static inline void HAL_writePwmData(HAL_Handle handle,HAL_PwmData_t *pPwmData)
       else if(pwmData_neg < _IQ(-0.45)) pwmData_sat = _IQ(-0.45);
       else  pwmData_sat = pwmData_neg;
 #else
-      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.5),_IQ(-0.5));
-      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.48),_IQ(-0.48)); // for V0.8 deadband 3us
-      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.47),_IQ(-0.47));   //V0.8
-      pwmData_sat = _IQsat(pwmData_neg,_IQ(0.45),_IQ(-0.45)); //V0 : 0.5->0.45->0.44 (20171108)
+      pwmData_sat = _IQsat(pwmData_neg,_IQ(0.5),_IQ(-0.5));
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.45),_IQ(-0.45));   //V0.8, 16kHz
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.46),_IQ(-0.46)); //V0.8, deadband 2us 8kHz
+      //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.47),_IQ(-0.47)); //V0.8, deadband 2us 4kHz
       //pwmData_sat = _IQsat(pwmData_neg,_IQ(0.41),_IQ(-0.41)); // for over 12kHz PWM frequency
 #endif
       pwmData_sat_dc = pwmData_sat + _IQ(0.5);

@@ -332,18 +332,26 @@ void USER_setParams(USER_Params *pUserParams)
   pUserParams->V_C_Offset = V_C_offset;
 #endif  
 
-  pUserParams->VF_freq_low = USER_MOTOR_FREQ_LOW;
-  pUserParams->VF_freq_high = USER_MOTOR_FREQ_HIGH;
+//  pUserParams->VF_freq_low = (float_t)USER_MOTOR_FREQ_LOW;
+//  pUserParams->VF_freq_high = (float_t)USER_MOTOR_FREQ_HIGH;
 
-//#define PWM_DEADBAND_LIMITATION  (1.0)
-#define PWM_DEADBAND_LIMITATION  (0.95)
-//#define PWM_DEADBAND_LIMITATION  (0.93)
+#define PWM_DEADBAND_LIMITATION  (0.93)
+//#define PWM_DEADBAND_LIMITATION  (0.93) // deadband 1.8us, PWM 4kHz, adjust for no haunting(?)
+//#define PWM_DEADBAND_LIMITATION  (1.08)
+//#define PWM_DEADBAND_LIMITATION  (1.06) // deadband 1.8us, PWM 12kHz, adjust for no haunting(?)
+//#define PWM_DEADBAND_LIMITATION  (1.02) // deadband 1.8us, PWM 8kHz, adjust for no haunting(?)
+//#define PWM_DEADBAND_LIMITATION  (0.965) // deadband 1.8us, PWM 4kHz, adjust for no haunting(?)
+//#define PWM_DEADBAND_LIMITATION  (0.93) // deadband 2us, PWM 4kHz
+//#define PWM_DEADBAND_LIMITATION  (0.91) // deadband 2us, PWM 8kHz
+//#define PWM_DEADBAND_LIMITATION  (0.89) // deadband 2us, PWM 12kHz
+//#define PWM_DEADBAND_LIMITATION  (0.87)  // deadband 2us, PWM 16kHz
 
 #if 1
 #ifdef SUPPORT_USER_VARIABLE
   pUserParams->VF_volt_max = ((pmtr->input_voltage*1.35)/1.732051)*PWM_DEADBAND_LIMITATION;
 #else
-  pUserParams->VF_volt_max = ((USER_INPUT_VOLTAGE*1.35)/1.732051)*PWM_DEADBAND_LIMITATION;
+  pUserParams->VF_volt_max = ((USER_INPUT_VOLTAGE*1.414)/1.732051)*PWM_DEADBAND_LIMITATION;
+  //pUserParams->VF_volt_max = ((USER_INPUT_VOLTAGE*1.35)/1.732051)*PWM_DEADBAND_LIMITATION;
 #endif
   //pUserParams->VF_volt_min = 20.0;
   pUserParams->VF_volt_min = (pUserParams->VF_volt_max*(USER_MOTOR_FREQ_LOW/USER_MOTOR_FREQ_HIGH));

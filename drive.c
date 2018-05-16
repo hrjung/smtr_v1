@@ -152,7 +152,7 @@ int DRV_setVoltageBoost(float_t value)
 
 	param.ctrl.v_boost = value; // 1000 means 100.0%
 
-	MAIN_applyBoost();
+	//MAIN_applyBoost();
 
 	//return EEP_updateItem(V_BOOST_ADDR, (unsigned char *)&param.ctrl.v_boost);
 	return 0;

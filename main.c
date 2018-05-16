@@ -291,10 +291,12 @@ extern int sample_type;
 void updateGlobalVariables_motor4Vf(CTRL_Handle handle);
 #endif
 
-extern uint32_t secCnt;
-extern uint16_t MyModbusAddr;
+_iq Id_in = _IQ(0.0);
+_iq Iq_in = _IQ(0.0);
 
-_iq c_factor=_IQ(1.00);
+extern uint32_t secCnt;
+//extern uint16_t MyModbusAddr;
+
 
 void SetGpioInterrupt(void);
 // **************************************************************************
@@ -1132,7 +1134,8 @@ void main(void)
   vs_freqHandle = VS_FREQ_init(&vs_freq,sizeof(vs_freq));
   VS_FREQ_setParams(vs_freqHandle,  gUserParams.iqFullScaleFreq_Hz, gUserParams.iqFullScaleVoltage_V, gUserParams.maxVsMag_pu);
   //gUserParams.VF_freq_low = mtr.input_voltage*param.ctrl.v_boost/100.0;
-  VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
+  //VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
+  VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
 
   {
 #if 0
@@ -1184,9 +1187,9 @@ void main(void)
   datalogHandle = DATALOG_init(&datalog,sizeof(datalog));
 
   // Connect inputs of the datalog module
-  datalog.iptr[0] = &gAdcData.V.value[0]; //&pwm_set[0];	// datalogBuff[1]
-  datalog.iptr[1] = &gAdcData.I.value[0]; //&pwm_set[1];	// datalogBuff[2]
-  datalog.iptr[2] = &gPwmData.Tabc.value[0]; //&pwm_set[2];	// datalogBuff[2]
+  datalog.iptr[0] = &Id_in;//&pwm_set[0];	// &gAdcData.V.value[0];
+  datalog.iptr[1] = &Iq_in; //&pwm_set[1];	//&gAdcData.I.value[0];
+  datalog.iptr[2] = &pwm_set[2];	//&gPwmData.Tabc.value[0];
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1473,7 +1476,8 @@ void main(void)
             EST_setMaxCurrentSlope_pu(obj->estHandle,gMaxCurrentSlope);
             gMotorVars.Flag_MotorIdentified = true;
 
-           	gMotorVars.SpeedRef_krpm = MAIN_getActualSpeedWithDirection();
+
+            gMotorVars.SpeedRef_krpm = MAIN_getActualSpeedWithDirection();
 
             // set the speed reference
             CTRL_setSpd_ref_krpm(ctrlHandle,gMotorVars.SpeedRef_krpm);
@@ -1657,8 +1661,8 @@ interrupt void mainISR(void)
 	gVbus_lpf = FILTER_SO_run_form_1(gVbusFilterHandle,gAdcData.dcBus);
 
 	//gOneOverDcBus = _IQdiv(_IQ(1.0),gVbus_lpf);
-	//gOneOverDcBus = _IQ(1.3);
-	gOneOverDcBus = _IQ(1.8); //_IQ(1.626); //_IQ(2.827);//_IQ(1.626); // _IQ(2.896);
+	gOneOverDcBus = _IQ(1.8); // V0.8
+	//gOneOverDcBus = _IQ(1.626); //_IQ(2.827);//_IQ(1.626); // _IQ(2.896);
 
 	// run the controller
 	uint_least16_t count_isr = CTRL_getCount_isr(ctrlHandle);
@@ -1727,8 +1731,35 @@ interrupt void mainISR(void)
 			// compute the sin/cos phasor
 			CTRL_computePhasor(controller_obj->angle_pu,&phasor);
 
+#if 0 // hrjung to check Id, Iq
+			 // set the phasor in the Park transform
+			 PARK_setPhasor(controller_obj->parkHandle,&phasor);
+
+			 // run the Park transform
+			 PARK_run(controller_obj->parkHandle,CTRL_getIab_in_addr(ctrlHandle),CTRL_getIdq_in_addr(ctrlHandle));
+
+			 Id_in = CTRL_getId_in_pu(ctrlHandle);
+
+	         // get the Iq reference value
+	         Iq_refValue = CTRL_getIq_ref_pu(ctrlHandle);
+
+		     // get the feedback value
+		     Iq_fbackValue = CTRL_getIq_in_pu(ctrlHandle);
+
+		     // set minimum and maximum for Id controller output
+		     outMax = _IQsqrt(_IQmpy(maxVsMag,maxVsMag) - _IQmpy(CTRL_getVd_out_pu(ctrlHandle),CTRL_getVd_out_pu(ctrlHandle)));
+		     outMin = -outMax;
+
+		     // set the minimum and maximum values
+		     PID_setMinMax(controller_obj->pidHandle_Iq,outMin,outMax);
+
+		     // run the Iq PID controller
+		     PID_run(controller_obj->pidHandle_Iq,Iq_refValue,Iq_fbackValue,CTRL_getVq_out_addr(ctrlHandle));
+#endif
+
 			// compute Valpha, Vbeta with angle and Vout
-			vs_freq.Vs_out = _IQmpy(vs_freq.Vs_out,c_factor);
+			//vs_freq.Vs_out = _IQmpy(vs_freq.Vs_out,c_factor);
+			//vs_freq.Vs_out += _IQ(0.01); //offset
 			Vab_pu.value[0] = _IQmpy(vs_freq.Vs_out,phasor.value[0]);
 			Vab_pu.value[1] = _IQmpy(vs_freq.Vs_out,phasor.value[1]);
 
@@ -1830,6 +1861,12 @@ interrupt void mainISR(void)
 	  block_count++;
   }
 #endif
+
+  //TODO : just temp stop for haunting at low speed of FOC
+  if(!DRV_isVfControl()
+	 && STA_getTargetFreq() == 0.0
+	 && gMotorVars.Speed_krpm <= _IQ(0.03))
+	  MAIN_disableSystem();
 
   //process PWM for DCI brake
   //MAIN_processDCBrake();
@@ -2000,7 +2037,7 @@ void updateGlobalVariables_motor(CTRL_Handle handle)
   // get the speed estimate
   gMotorVars.Speed_krpm = EST_getSpeed_krpm(obj->estHandle);
 
-  //STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
+  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
 
   // get the real time speed reference coming out of the speed trajectory generator
   gMotorVars.SpeedTraj_krpm = _IQmpy(CTRL_getSpd_int_ref_pu(handle),EST_get_pu_to_krpm_sf(obj->estHandle));
@@ -2307,15 +2344,15 @@ int MAIN_setReverseDirection(void)
 	return 0;
 }
 
-int MAIN_applyBoost(void)
-{
-	gUserParams.VF_freq_low = mtr.input_voltage*param.ctrl.v_boost/100.0;
-	UARTprintf("Boost voltage value=%f\n", gUserParams.VF_freq_low);
-
-	VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
-
-	return 0;
-}
+//int MAIN_applyBoost(void)
+//{
+//	float_t voost_value = mtr.input_voltage*param.ctrl.v_boost/100.0;
+//	UARTprintf("Boost voltage value=%f\n", gUserParams.VF_freq_low);
+//
+//	VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, voost_value, gUserParams.VF_volt_max);
+//
+//	return 0;
+//}
 
 float_t MAIN_getPwmFrequency(void)
 {

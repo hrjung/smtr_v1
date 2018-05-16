@@ -276,8 +276,8 @@ typedef struct _USER_Params_
   float_t		V_C_Offset;
 #endif
 
-  float_t 		VF_freq_low;
-  float_t 		VF_freq_high;
+  //float_t 		VF_freq_low;
+  //float_t 		VF_freq_high;
   float_t 		VF_volt_min;
   float_t 		VF_volt_max;
 

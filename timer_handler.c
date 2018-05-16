@@ -67,7 +67,7 @@ timer_handler_st time_sig[MAX_TIMER_TSIG];
  */
 extern HAL_Handle halHandle;
 
-
+extern int FREQ_setFreqValue(float_t value);
 /*
  *  ======== local function ========
  */
@@ -179,6 +179,45 @@ interrupt void timer0ISR(void)
 #ifdef SUPPORT_REGEN_GPIO
 	{
 		regen_timer = gTimerCount; // 10Hz period, minimum pulse width is 100us
+	}
+#endif
+
+#if 0 // only for test without debug connection
+	if(internal_status.relay_enabled)
+	{
+		static uint32_t test_start=0, test_duration=0;
+		static int freq_set=0, test_end=0;
+
+		// set start time
+		if(test_start == 0) test_start = secCnt;
+
+		// wait 3 sec
+		if(secCnt - test_start > 30)
+		{
+			if(freq_set == 0)
+			{
+				//set frequency
+				FREQ_setFreqValue(25.0);
+				// start
+				MAIN_enableSystem(0);
+				STA_calcResolution();
+				freq_set = 1;
+				test_duration = secCnt;
+				UARTprintf("set freq 20Hz at %f\n", (float_t)(secCnt/10.0));
+			}
+
+			// run 10s including acceleration
+			if(freq_set == 1 && (secCnt - test_duration > 100))
+			{
+				// stop motor
+				if(test_end == 0)
+				{
+					STA_setStopCondition();
+					test_end = 1;
+					UARTprintf("stop at %f\n", (float_t)(secCnt/10.0));
+				}
+			}
+		}
 	}
 #endif
 
