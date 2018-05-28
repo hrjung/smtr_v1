@@ -21,8 +21,10 @@
 //timer interrupt : period 1ms
 #define SUPPORT_TIMER0_INTERRUPT
 
-// 2KB added
+
 #define SUPPORT_VF_CONTROL
+// for improve VF to be stable
+//#define SUPPORT_MODIFIED_VF
 
 #define SUPPORT_FIELD_WEAKENING
 

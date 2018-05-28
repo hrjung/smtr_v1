@@ -291,11 +291,13 @@ extern int sample_type;
 void updateGlobalVariables_motor4Vf(CTRL_Handle handle);
 #endif
 
+#ifdef SUPPORT_MODIFIED_VF
 _iq Id_in = _IQ(0.0);
 _iq Iq_in = _IQ(0.0);
+#endif
 
 extern uint32_t secCnt;
-//extern uint16_t MyModbusAddr;
+
 
 
 void SetGpioInterrupt(void);
@@ -1135,7 +1137,10 @@ void main(void)
   VS_FREQ_setParams(vs_freqHandle,  gUserParams.iqFullScaleFreq_Hz, gUserParams.iqFullScaleVoltage_V, gUserParams.maxVsMag_pu);
   //gUserParams.VF_freq_low = mtr.input_voltage*param.ctrl.v_boost/100.0;
   //VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
-  VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
+  if(param.ctrl.v_boost == 0.0)
+	  VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
+  else
+	  MAIN_applyBoost();
 
   {
 #if 0
@@ -1187,9 +1192,13 @@ void main(void)
   datalogHandle = DATALOG_init(&datalog,sizeof(datalog));
 
   // Connect inputs of the datalog module
+#if 0
   datalog.iptr[0] = &Id_in;//&pwm_set[0];	// &gAdcData.V.value[0];
   datalog.iptr[1] = &Iq_in; //&pwm_set[1];	//&gAdcData.I.value[0];
-  datalog.iptr[2] = &pwm_set[2];	//&gPwmData.Tabc.value[0];
+#endif
+  datalog.iptr[0] = &gAdcData.I.value[0];
+  datalog.iptr[1] = &gAdcData.I.value[1];
+  datalog.iptr[2] = &gAdcData.V.value[2];	//&gPwmData.Tabc.value[0];
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1731,7 +1740,7 @@ interrupt void mainISR(void)
 			// compute the sin/cos phasor
 			CTRL_computePhasor(controller_obj->angle_pu,&phasor);
 
-#if 0 // hrjung to check Id, Iq
+#ifdef SUPPORT_MODIFIED_VF // hrjung to check Id, Iq
 			 // set the phasor in the Park transform
 			 PARK_setPhasor(controller_obj->parkHandle,&phasor);
 
@@ -1819,6 +1828,7 @@ interrupt void mainISR(void)
 #ifdef PWM_DUTY_TEST
   if(gFlag_PwmTest)
   {
+#if 0
 	  if(gFlag_PwmStepTest)
 	  {
 		  static int inc=1;
@@ -1846,6 +1856,7 @@ interrupt void mainISR(void)
 		  delay_count--;
 		  //UTIL_testbit(0);
 	  }
+#endif
 	  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
 	  gPwmData.Tabc.value[1] = gPwmData_Value;
 	  gPwmData.Tabc.value[2] = gPwmData_Value;
@@ -2029,6 +2040,12 @@ interrupt void mainISR(void)
 } // end of mainISR() function
 
 
+void updateGlobalVariables_user(void)
+{
+	internal_status.ipm_temp = gAdcData.ipm_temperature;
+	internal_status.mtr_temp = gAdcData.mtr_temperature;
+}
+
 void updateGlobalVariables_motor(CTRL_Handle handle)
 {
   CTRL_Obj *obj = (CTRL_Obj *)handle;
@@ -2103,8 +2120,8 @@ void updateGlobalVariables_motor(CTRL_Handle handle)
   // Get the DC buss voltage
   //gMotorVars.VdcBus_kV = _IQdiv(gAdcData.dcBus,1000.0);
   gMotorVars.VdcBus_kV = _IQmpy(gAdcData.dcBus,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
-  internal_status.ipm_temp = gAdcData.ipm_temperature;
-  internal_status.mtr_temp = gAdcData.mtr_temperature;
+
+  updateGlobalVariables_user();
 
   return;
 } // end of updateGlobalVariables_motor() function
@@ -2137,8 +2154,8 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle)
 
   // Get the DC bus voltage
   gMotorVars.VdcBus_kV = _IQmpy(gAdcData.dcBus,_IQ(USER_IQ_FULL_SCALE_VOLTAGE_V/1000.0));
-  internal_status.ipm_temp = gAdcData.ipm_temperature;
-  internal_status.mtr_temp = gAdcData.mtr_temperature;
+
+  updateGlobalVariables_user();
 
   return;
 }
@@ -2344,15 +2361,15 @@ int MAIN_setReverseDirection(void)
 	return 0;
 }
 
-//int MAIN_applyBoost(void)
-//{
-//	float_t voost_value = mtr.input_voltage*param.ctrl.v_boost/100.0;
-//	UARTprintf("Boost voltage value=%f\n", gUserParams.VF_freq_low);
-//
-//	VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, voost_value, gUserParams.VF_volt_max);
-//
-//	return 0;
-//}
+int MAIN_applyBoost(void)
+{
+	float_t voost_value = gUserParams.VF_volt_max*param.ctrl.v_boost/100.0;
+	UARTprintf("Boost voltage value=%f\n", voost_value);
+
+	VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, voost_value, gUserParams.VF_volt_max);
+
+	return 0;
+}
 
 float_t MAIN_getPwmFrequency(void)
 {
@@ -2404,12 +2421,14 @@ void UTIL_setInitRelay(void)
 {
 	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 1;
+	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
 void UTIL_clearInitRelay(void)
 {
 	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 0;
+	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
 void UTIL_setShaftBrake(void)

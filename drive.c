@@ -94,7 +94,6 @@ int DRV_setAccelTime(float_t value)
 
 	//STA_setResolution(ACCEL, DRV_calculateAccelRate_krpm(value));
 
-	//return EEP_updateItem(ACCEL_TIME_ADDR, (unsigned char *)&param.ctrl.accel_time);
 	return 0;
 }
 
@@ -106,7 +105,6 @@ int DRV_setDecelTime(float_t value)
 
 	//STA_setResolution(DECEL, DRV_calculateAccelRate_krpm(value));
 
-	//return EEP_updateItem(DECEL_TIME_ADDR, (unsigned char *)&param.ctrl.decel_time);
 	return 0;
 }
 
@@ -118,13 +116,11 @@ int DRV_isVfControl(void)
 void DRV_enableVfControl(void)
 {
 	param.ctrl.vf_foc_sel = VF_CONTROL;
-	//EEP_updateItem(VF_FOC_SEL_ADDR, (unsigned char *)&param.ctrl.vf_foc_sel);
 }
 
 void DRV_enableFocControl(void)
 {
 	param.ctrl.vf_foc_sel = FOC_CONTROL;
-	//EEP_updateItem(VF_FOC_SEL_ADDR, (unsigned char *)&param.ctrl.vf_foc_sel);
 }
 
 int DRV_setTorqueLimit(float_t limit)
@@ -142,19 +138,19 @@ int DRV_setEnergySave(int method)
 
 	param.ctrl.energy_save = method;
 
-	//return EEP_updateItem(ENERGY_SAVE_ADDR, (unsigned char *)&param.ctrl.energy_save);
 	return 0;
 }
 
 int DRV_setVoltageBoost(float_t value)
 {
-	if(value < 0.0 || value > 100.0) return 1;
+	if(value < 0.0 || value > 15.0) return 1;
 
-	param.ctrl.v_boost = value; // 1000 means 100.0%
+	if(MAIN_isSystemEnabled()) return 1; // cannot update during motor running
 
-	//MAIN_applyBoost();
+	param.ctrl.v_boost = value;
 
-	//return EEP_updateItem(V_BOOST_ADDR, (unsigned char *)&param.ctrl.v_boost);
+	MAIN_applyBoost();
+
 	return 0;
 }
 
@@ -169,7 +165,6 @@ int DRV_setPwmFrequency(int value)
 	//gUserParams.pwmPeriod_kHz = pwm_tbl[param.ctrl.pwm_freq];
 	//gUserParams.pwmPeriod_usec = 1000.0/gUserParams.pwmPeriod_kHz;
 
-	//return EEP_updateItem(PWM_FREQ_ADDR, (unsigned char *)&param.ctrl.pwm_freq);
 	return 0;
 }
 

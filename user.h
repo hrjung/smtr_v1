@@ -155,7 +155,7 @@ extern "C" {
 ////#define   I_C_offset    (1.333306)
 //#define   I_C_offset    (0.002903)
 //for V0.8
-#define   I_A_offset    (1.34)	// V
+#define   I_A_offset    (1.325)	// V
 #define   I_B_offset    (1.325)  // W
 //#define   I_A_offset    (1.70)	// V
 //#define   I_B_offset    (1.68)  // W

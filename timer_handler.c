@@ -160,7 +160,7 @@ interrupt void timer0ISR(void)
 	gTimerCount++;
 	if(gTimerCount%100 == 0) secCnt++; // 100ms
 
-#if 1
+#if 0
 	if(gTimerCount%1000 == 0)
 	{
 #ifdef SUPPORT_HW_COMMON
