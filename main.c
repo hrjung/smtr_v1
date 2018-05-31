@@ -1857,9 +1857,16 @@ interrupt void mainISR(void)
 		  //UTIL_testbit(0);
 	  }
 #endif
+
+#if 1
 	  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
 	  gPwmData.Tabc.value[1] = gPwmData_Value;
 	  gPwmData.Tabc.value[2] = gPwmData_Value;
+#else // DC injection test
+	  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
+	  gPwmData.Tabc.value[1] = _IQ(-0.5);//gPwmData_Value;
+	  gPwmData.Tabc.value[2] = _IQ(-0.5);//gPwmData_Value;
+#endif
   }
 #else
 

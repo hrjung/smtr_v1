@@ -349,13 +349,14 @@ float_t STA_getCurFreq(void)
 
 void STA_setNextFreq(float_t value)
 {
-	if(value >= 0.0)
-		MAIN_setForwardDirection();
-	else
-	{
-		value = -(1.0)*value;
-		MAIN_setReverseDirection();
-	}
+	// hrjung : direction is not controlled by sign of freq
+//	if(value >= 0.0)
+//		MAIN_setForwardDirection();
+//	else
+//	{
+//		value = -(1.0)*value;
+//		MAIN_setReverseDirection();
+//	}
 
 	m_status.target_freq = FREQ_getVarifiedFreq(m_status.cur_freq, value);
 }
