@@ -223,6 +223,7 @@ typedef struct
 	float_t		trip_level;
 	float_t		ovc_level;
 	float_t		regen_max_V;
+	float_t 	dci_pwm_rate;
 
 	spd_jump_st spd_jmp[MAX_JUMP_FREQ_NUM];
 
@@ -285,9 +286,7 @@ typedef struct
 	float_t 	Iv_inst;
 	float_t 	Iw_inst;
 
-	float_t 	Iu_rms;
-	float_t 	Iv_rms;
-	float_t 	Iw_rms;
+	float_t 	Irms[3];
 
 	uint16_t	Iu_miss_cnt;
 	uint16_t	Iv_miss_cnt;

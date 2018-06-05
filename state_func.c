@@ -349,7 +349,8 @@ float_t STA_getCurFreq(void)
 
 void STA_setNextFreq(float_t value)
 {
-	// hrjung : direction is not controlled by sign of freq
+	// hrjung for direction test : direction is not controlled by sign of freq, only dir command
+	// TODO : require condition for Aanalog input command
 //	if(value >= 0.0)
 //		MAIN_setForwardDirection();
 //	else

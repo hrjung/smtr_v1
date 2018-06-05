@@ -114,15 +114,16 @@ extern "C" {
 //! \brief WARNING: this value MUST be larger than the maximum current readings that you are expecting from the motor or the reading will roll over to 0, creating a control issue
 //#define USER_IQ_FULL_SCALE_CURRENT_A          (10.0)   // 10.0 Example for hvkit_rev1p1 typical usage
 //#define USER_IQ_FULL_SCALE_CURRENT_A          (14.9058)   // 10.0 Example for hvkit_rev1p1 typical usage
-#define USER_IQ_FULL_SCALE_CURRENT_A          (18.75)   // 10.0 Example for hvkit_rev1p1 typical usage
-
+//#define USER_IQ_FULL_SCALE_CURRENT_A          (18.75)   // 10.0 Example for hvkit_rev1p1 typical usage
+#define USER_IQ_FULL_SCALE_CURRENT_A          (10.0)
 
 //! \brief Defines the maximum current at the AD converter
 //! \brief The value that will be represented by the maximum ADC input (3.3V) and conversion (0FFFh)
 //! \brief Hardware dependent, this should be based on the current sensing and scaling to the ADC input
 //#define USER_ADC_FULL_SCALE_CURRENT_A        (19.89)     // 19.89 hvkit_rev1p1 current scaling
 //#define USER_ADC_FULL_SCALE_CURRENT_A        (39.66)
-#define USER_ADC_FULL_SCALE_CURRENT_A        (49.7)
+//#define USER_ADC_FULL_SCALE_CURRENT_A        (49.7)
+#define USER_ADC_FULL_SCALE_CURRENT_A        (24.85)
 
 //! \brief Defines the current scale factor for the system
 //! \brief Compile time calculation for scale factor (ratio) used throughout the system
@@ -155,14 +156,14 @@ extern "C" {
 ////#define   I_C_offset    (1.333306)
 //#define   I_C_offset    (0.002903)
 //for V0.8
-#define   I_A_offset    (1.325)	// V
-#define   I_B_offset    (1.325)  // W
-//#define   I_A_offset    (1.70)	// V
-//#define   I_B_offset    (1.68)  // W
-#define   I_C_offset    (0.0)  // U
-//#define   I_A_offset    (0.0)
-//#define   I_B_offset    (1.65667)
-//#define   I_C_offset    (1.65667)
+//#define   I_A_offset    (1.36)	// V
+//#define   I_B_offset    (1.325)  // W
+//#define   I_C_offset    (0.0)  // U
+
+// for half capacity current sensor
+#define   I_A_offset    (1.15)
+#define   I_B_offset    (1.28)
+#define   I_C_offset    (0.0)
 
 //! \brief ADC voltage offsets for A, B, and C phases
 //! \brief One-time hardware dependent, though the calibration can be done at run-time as well

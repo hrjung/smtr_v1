@@ -22,6 +22,8 @@ enum
 
 #define MAX_REGEN_LIMIT_FREQ	(5)
 
+extern int BRK_isDCIBrakeEnabled(void);
+extern int BRK_isFreeRunEnabled(void);
 
 extern int BRK_setBrakeMethod(int method);
 extern int BRK_setBrakeTIME(int limit);

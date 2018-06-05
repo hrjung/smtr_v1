@@ -241,14 +241,23 @@ interrupt void timer0ISR(void)
 		}
 	}
 
+#if 1
 	if(time_sig[OVERLOAD_WARN_START_TSIG].enable)
 	{
 		if(TMR_isTimeOutCondition(OVERLOAD_WARN_START_TSIG))
 		{
 			time_sig[OVERLOAD_WARN_START_TSIG].timeout_flag = 1;
-			//MAIN_disableSystem();
 		}
 	}
+
+	if(time_sig[OVERLOAD_WARN_END_TSIG].enable)
+	{
+		if(TMR_isTimeOutCondition(OVERLOAD_WARN_END_TSIG))
+		{
+			time_sig[OVERLOAD_WARN_END_TSIG].timeout_flag = 1;
+		}
+	}
+#endif
 
 	if(time_sig[OVERLOAD_TRIP_TSIG].enable)
 	{

@@ -231,10 +231,6 @@ float_t temp_spd_ref=0.0;
 float_t direction = 1.0;
 int for_rev_flag=0; //flag for forward <-> reverse drive
 
-// test for scaling
-_iq conv_ref = _IQ(0.1);
-int nv_init=0;
-
 uint16_t block_count=0;
 #ifdef SUPPORT_I_RMS_MEASURE
 float_t array_Iu[I_RMS_SAMPLE_COUNT], array_Iv[I_RMS_SAMPLE_COUNT], array_Iw[I_RMS_SAMPLE_COUNT];
@@ -246,14 +242,7 @@ int i_ready_flag=0;
 #ifdef PWM_DUTY_TEST
 uint16_t gFlag_PwmTest = false;
 _iq gPwmData_Value = _IQ(0.);
-uint16_t gFlag_PwmStepTest = false;
-int pwm_cnt=0;
-uint16_t delay_count=10;
-
-int p2n=0;
-int n2p=0;
-uint16_t p_count=0;
-uint16_t n_count=0;
+uint16_t gFlagDCIBrake = false;
 #endif
 
 _iq pwm_set[3], pwm_diff[3];
@@ -418,7 +407,10 @@ float_t MAIN_getIw(void)
 
 float_t MAIN_getIave(void)
 {
-	return internal_status.Iu_rms;
+	static int cnt=0;
+
+	//cnt = (cnt+1)%3;
+	return internal_status.Irms[cnt];
 }
 
 inline void MAIN_readCurrent(void)
@@ -519,9 +511,9 @@ inline void MAIN_calculateIrms(void)
 		total_Iv -= bk_Iv;
 		total_Iw -= bk_Iw;
 
-		internal_status.Iu_rms = sqrtf(total_Iu/(float_t)I_RMS_SAMPLE_COUNT);
-		internal_status.Iv_rms = sqrtf(total_Iv/(float_t)I_RMS_SAMPLE_COUNT);
-		internal_status.Iw_rms = sqrtf(total_Iw/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Irms[0] = sqrtf(total_Iu/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Irms[1] = sqrtf(total_Iv/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Irms[2] = sqrtf(total_Iw/(float_t)I_RMS_SAMPLE_COUNT);
 	}
 	i_pos++;
 }
@@ -558,8 +550,8 @@ int MAIN_isOverCurrent(void)
 int MAIN_isMissingIphase(void)
 {
 
-	// Iu phase is missing
-	if(internal_status.Iu_rms < MISSING_PHASE_RMS_VALUE)
+	// Iv phase is missing
+	if(internal_status.Irms[1] < MISSING_PHASE_RMS_VALUE)
 	{
 		internal_status.Iu_miss_cnt++;
 		if(internal_status.Iu_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
@@ -571,8 +563,8 @@ int MAIN_isMissingIphase(void)
 	else
 		internal_status.Iu_miss_cnt = 0;
 
-	// Iu phase is missing
-	if(internal_status.Iw_rms < MISSING_PHASE_RMS_VALUE)
+	// Iw phase is missing
+	if(internal_status.Irms[2] < MISSING_PHASE_RMS_VALUE)
 	{
 		internal_status.Iw_miss_cnt++;
 		if(internal_status.Iw_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
@@ -584,8 +576,8 @@ int MAIN_isMissingIphase(void)
 	else
 		internal_status.Iw_miss_cnt = 0;
 
-	// Iv phase is missing
-	if(internal_status.Iw_rms == -internal_status.Iu_rms)
+	// Iu phase is missing
+	if(internal_status.Irms[2] == -internal_status.Irms[1])
 	{
 		internal_status.Iw_miss_cnt++;
 		if(internal_status.Iw_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
@@ -667,9 +659,10 @@ void MAIN_setDeviceConstant(void)
 //	dev_const.regen_limit = DC_VOLTAGE_END_REGEN_LEVEL;
 	dev_const.trip_level = mtr.max_current*(float_t)param.protect.ovl.tr_limit/100.0;
 	dev_const.warn_level = mtr.max_current*(float_t)param.protect.ovl.wr_limit/100.0;
-	dev_const.ovc_level = mtr.max_current*2.0;
+	dev_const.ovc_level = mtr.max_current*3.0;
 
 	dev_const.regen_max_V = sqrtf(0.9*param.protect.regen.resistance*(float_t)param.protect.regen.power);
+	dev_const.dci_pwm_rate = param.brk.dci_braking_rate/100.0 * mtr.max_current*mtr.Rs*2.0; // use 2*Rs for Y connection
 
 	//set additional flag
 
@@ -681,9 +674,9 @@ void MAIN_setDeviceConstant(void)
 	internal_status.Iv_inst = 0.0;
 	internal_status.Iw_inst = 0.0;
 
-	internal_status.Iu_rms = 0.0;
-	internal_status.Iv_rms = 0.0;
-	internal_status.Iw_rms = 0.0;
+	internal_status.Irms[0] = 0.0;
+	internal_status.Irms[1] = 0.0;
+	internal_status.Irms[2] = 0.0;
 
 	internal_status.Vu_inst = 0.0;
 	internal_status.Vv_inst = 0.0;
@@ -719,7 +712,7 @@ void MAIN_setDeviceConstant(void)
 int dc_pwm_off=0;
 int MAIN_processDCBrake(void)
 {
-	_iq dc_value=_IQ(0.0);
+	float_t dc_value=0.0;
 	static int block_flag=0, dc_brake_flag=0;
 
 	if(param.brk.method != DC_INJECT_BRAKE) return 0;
@@ -739,7 +732,7 @@ int MAIN_processDCBrake(void)
 		{
 			HAL_disablePwm(halHandle);
 			block_flag = 1;
-			//UARTprintf("DCI BLOCK off PWM, at %d\n", (int)secCnt);
+			UARTprintf("DCI BLOCK off PWM, at %d\n", (int)secCnt);
 		}
 		break;
 
@@ -747,23 +740,25 @@ int MAIN_processDCBrake(void)
 		if(dc_brake_flag == 0)
 		{
 			HAL_enablePwm(halHandle);
-			dc_value = _IQ(param.brk.dci_braking_rate/100.0);
+			dc_value = dev_const.dci_pwm_rate*100.0/MAIN_getVdcBus();
 			dc_brake_flag = 1;
-			//UARTprintf("DCI BRAKE PWM on, at %d\n", (int)secCnt);
+			UARTprintf("DCI BRAKE PWM on, duty=%f, at %d\n", dc_value, (int)secCnt);
 		}
 		// apply DC voltage
-		gPwmData.Tabc.value[0] = dc_value;
-		gPwmData.Tabc.value[1] = dc_value;
-		gPwmData.Tabc.value[2] = dc_value;
+		gPwmData.Tabc.value[0] = _IQ(dc_value/100.0);
+		gPwmData.Tabc.value[1] = _IQ(0.0);
+		gPwmData.Tabc.value[2] = _IQ(0.0);
 		break;
 
 	case DCI_PWM_OFF_STATE:
 		// PWM off
 		if(dc_pwm_off == 0)
 		{
-			MAIN_disableSystem();
+			gPwmData.Tabc.value[0] = _IQ(0.0);
+			gPwmData.Tabc.value[1] = _IQ(0.0);
+			gPwmData.Tabc.value[2] = _IQ(0.0);
 			dc_pwm_off = 1;
-			//UARTprintf("DCI PWM off, at %d\n", (int)secCnt);
+			UARTprintf("DCI PWM off, at %d\n", (int)secCnt);
 		}
 
 		break;
@@ -803,21 +798,22 @@ void initParam(void)
 	BRK_setBrakeTIME(5);
 	BRK_setThreshold(5.0);
 
+	BRK_setBrakeMethod(DC_INJECT_BRAKE);
 	//default Dci brake
 	param.brk.dci_start_freq = 5.0; // start at 5Hz
-	param.brk.dci_block_time = 0.5;  // 0.5 sec
+	param.brk.dci_block_time = 1.0;  // 0.5 sec
 	param.brk.dci_braking_rate = 50.0; // 50% rate
-	param.brk.dci_braking_time = 2.0; // 1 sec brake
+	param.brk.dci_braking_time = 1.0; // 1 sec brake
 
 	// default err_info setting
 	ERR_clearTripData();
 
 	// default protect setting
 	OVL_setWarningLevel(120); // Samyang motor's SF=1.15
-	param.protect.ovl.wr_duration = 30;
+	param.protect.ovl.wr_duration = 10;
 	param.protect.ovl.enable = 1;
 	OVL_setTripLevel(150);
-	param.protect.ovl.tr_duration = 10;
+	param.protect.ovl.tr_duration = 3;
 
 	param.protect.regen.resistance = 100.0;
 	param.protect.regen.power = 400;
@@ -1198,7 +1194,7 @@ void main(void)
 #endif
   datalog.iptr[0] = &gAdcData.I.value[0];
   datalog.iptr[1] = &gAdcData.I.value[1];
-  datalog.iptr[2] = &gAdcData.V.value[2];	//&gPwmData.Tabc.value[0];
+  datalog.iptr[2] = &gAdcData.I.value[2];	//&gPwmData.Tabc.value[0];
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1710,7 +1706,8 @@ interrupt void mainISR(void)
 //			EST_run(controller_obj->estHandle,CTRL_getIab_in_addr(ctrlHandle),CTRL_getVab_in_addr(ctrlHandle),
 //									gAdcData.dcBus,TRAJ_getIntValue(controller_obj->trajHandle_spd));
 
-
+			if(!BRK_isDCIBrakeEnabled() || (DCIB_getState() == DCI_NONE_STATE))
+			{
 #ifdef SUPPORT_JUMP_FREQ
 			vf_speed_pu = TRAJ_getIntValue(controller_obj->trajHandle_spd);
 
@@ -1779,6 +1776,7 @@ interrupt void mainISR(void)
 
 			// run the space Vector Generator (SVGEN) module
 			SVGEN_run(controller_obj->svgenHandle,CTRL_getVab_out_addr(ctrlHandle),&(gPwmData.Tabc));
+			} // DCI brake not enabled
 		}
 		else if(ctrlState == CTRL_State_OffLine)
 		{
@@ -1828,45 +1826,18 @@ interrupt void mainISR(void)
 #ifdef PWM_DUTY_TEST
   if(gFlag_PwmTest)
   {
-#if 0
-	  if(gFlag_PwmStepTest)
+	  if(gFlagDCIBrake == 0)
 	  {
-		  static int inc=1;
-		  //UTIL_testbit(1);
-		  if(delay_count == 0)
-		  {
-#if 1
-			  if(pwm_cnt == 100)
-				  inc = -1;
-			  else if(pwm_cnt == 0)
-				  inc = 1;
-#else
-			  if(pwm_cnt == 6)
-				  inc = -1;
-			  else if(pwm_cnt == 5)
-				  inc = 1;
-#endif
-			  pwm_cnt += inc;
-			  gPwmData_Value = _IQ((float_t)(50-pwm_cnt)/100.0);
-			  if(pwm_cnt <= 5)
-				  delay_count=200;
-			  else
-				  delay_count=100;
-		  }
-		  delay_count--;
-		  //UTIL_testbit(0);
+		  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
+		  gPwmData.Tabc.value[1] = gPwmData_Value;
+		  gPwmData.Tabc.value[2] = gPwmData_Value;
 	  }
-#endif
-
-#if 1
-	  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
-	  gPwmData.Tabc.value[1] = gPwmData_Value;
-	  gPwmData.Tabc.value[2] = gPwmData_Value;
-#else // DC injection test
-	  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
-	  gPwmData.Tabc.value[1] = _IQ(-0.5);//gPwmData_Value;
-	  gPwmData.Tabc.value[2] = _IQ(-0.5);//gPwmData_Value;
-#endif
+	  else
+	  {
+		  gPwmData.Tabc.value[0] = gPwmData_Value;  //~0.5 ~ 0.5
+		  gPwmData.Tabc.value[1] = _IQ(0.0);//gPwmData_Value;
+		  gPwmData.Tabc.value[2] = _IQ(0.0);//gPwmData_Value;
+	  }
   }
 #else
 
@@ -1887,7 +1858,14 @@ interrupt void mainISR(void)
 	  MAIN_disableSystem();
 
   //process PWM for DCI brake
-  //MAIN_processDCBrake();
+  MAIN_processDCBrake();
+
+  if(BRK_isFreeRunEnabled())
+  {
+	  gPwmData.Tabc.value[0] = _IQ(0.0);
+	  gPwmData.Tabc.value[1] = _IQ(0.0);
+	  gPwmData.Tabc.value[2] = _IQ(0.0);
+  }
 
   // write the PWM compare values
   HAL_writePwmData(halHandle,&gPwmData);
@@ -2014,27 +1992,6 @@ interrupt void mainISR(void)
 	  dbg_getSample(internal_status.pwmData[0], internal_status.pwmData[1], internal_status.pwmData[2]);
 #endif
 
-#if 0
-  prev_val = internal_status.pwmData[0];
-  if(prev_val >= 0.0 && internal_status.pwmData[0] < 0.0)
-  {
-	  //UTIL_testbit(1);
-	  p2n = 1;
-	  n2p = 0;
-#ifdef SAMPLE_ADC_VALUE
-  if(sample_type == PWM_PERIOD_COUNT_TYPE)
-	  dbg_getSample((float_t)n_count, 0.0, 0.0);
-#endif
-  	  n_count=0;
-  }
-  else if(prev_val < 0.0 && internal_status.pwmData[0] >= 0.0)
-  {
-	  //UTIL_testbit(0);
-	  p2n = 0;
-	  n2p = 1;
-  }
-   n_count += p2n;
-#endif
 #endif
 
 
@@ -2140,7 +2097,10 @@ void updateGlobalVariables_motor4Vf(CTRL_Handle handle)
 
   gMotorVars.Speed_krpm = _IQ(temp_spd_ref);
 
-  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
+  if(BRK_isDCIBrakeEnabled() && (DCIB_getState() == DCI_PWM_OFF_STATE))
+	  STA_setCurSpeed(0.0);
+  else
+	  STA_setCurSpeed(_IQtoF(gMotorVars.Speed_krpm));
 
   // get the controller state
   gMotorVars.CtrlState = CTRL_getState(handle);

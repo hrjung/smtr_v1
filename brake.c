@@ -60,6 +60,24 @@ extern uint32_t secCnt;
 /*
  *  ======== public function ========
  */
+int BRK_isDCIBrakeEnabled(void)
+{
+	return (param.brk.method == DC_INJECT_BRAKE);
+}
+
+int BRK_isFreeRunEnabled(void)
+{
+	if(param.brk.method == FREE_RUN_BRAKE
+		&& state_param.inv == STATE_DECEL
+		&& STA_getTargetFreq() == 0.0
+		&& STA_getCurFreq() != 0.0)
+		return 1;
+
+	return 0;
+}
+
+
+
 
 int BRK_setBrakeMethod(int method)
 {
@@ -151,6 +169,7 @@ int DCIB_setBrakeRate(float_t rate)
 
 	itime = (uint16_t)rate;
 	param.brk.dci_braking_rate = (float_t)itime;
+	dev_const.dci_pwm_rate = param.brk.dci_braking_rate/100.0 * mtr.max_current*mtr.Rs;
 
 	UARTprintf(" DCB brake rate %f \n", param.brk.dci_braking_rate);
 
@@ -179,8 +198,10 @@ int DCIB_getState(void)
 
 int DCIB_isBrakeTriggered(void)
 {
-
-	if(state_param.inv == STATE_DECEL && STA_getCurFreq() <= param.brk.dci_start_freq)
+	if(state_param.inv == STATE_DECEL
+		&& STA_getTargetFreq() == 0.0
+		&& STA_getCurFreq() != 0.0
+		&& STA_getCurFreq() <= param.brk.dci_start_freq)
 		return 1;
 
 	return 0;
@@ -199,7 +220,7 @@ int DCIB_processBrakeSigHandler(void)
 		{
 			TMR_startTimerSig(DCI_BRAKE_SIG_OFF_TSIG, param.brk.dci_block_time);
 			dci_state_flag = DCI_BLOCK_STATE;
-			//UARTprintf("DCI state NONE -> BLOCK, at %d\n", (int)secCnt);
+			UARTprintf("DCI handler NONE -> BLOCK, at %d\n", (int)secCnt);
 		}
 		break;
 
@@ -210,7 +231,7 @@ int DCIB_processBrakeSigHandler(void)
 			TMR_disableTimerSig(DCI_BRAKE_SIG_OFF_TSIG);
 			TMR_startTimerSig(DCI_BRAKE_SIG_ON_TSIG, param.brk.dci_braking_time);
 			dci_state_flag = DCI_DC_BRAKE_STATE;
-			UARTprintf("DCI state BLOCK -> BRAKE, at %d\n", (int)secCnt);
+			UARTprintf("DCI handler BLOCK -> BRAKE, at %d\n", (int)secCnt);
 		}
 		break;
 
@@ -221,14 +242,17 @@ int DCIB_processBrakeSigHandler(void)
 			TMR_disableTimerSig(DCI_BRAKE_SIG_ON_TSIG);
 			// if timeout -> PWM_OFF state
 			dci_state_flag = DCI_PWM_OFF_STATE;
-			UARTprintf("DCI state BRAKE -> OFF, at %d\n", (int)secCnt);
+			UARTprintf("DCI handler BRAKE -> OFF, at %d\n", (int)secCnt);
 		}
 		break;
 
 	case DCI_PWM_OFF_STATE:
 		// PWM off and clear flag
-		if(dc_pwm_off)
+		if(dc_pwm_off && STA_isStopState())
+		{
 			dci_state_flag = DCI_NONE_STATE;
+			//UARTprintf("DCI handler BRAKE -> OFF, at %d\n", (int)secCnt);
+		}
 		break;
 
 	default:

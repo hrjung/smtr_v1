@@ -127,14 +127,14 @@ extern MOTOR_working_st m_status;
 extern float_t sf4pu_rpm;
 extern USER_Params gUserParams;
 extern int for_rev_flag;
+extern int ovl_alarm_enable;
 
 extern float_t MAIN_getPwmFrequency(void);
 extern float_t MAIN_getIu(void);
 extern float_t MAIN_getIv(void);
 extern float_t MAIN_getIw(void);
-#ifdef SAMPLE_ADC_VALUE
 extern float_t MAIN_getIave(void);
-#endif
+
 extern float_t MAIN_getDC_lfp(void);
 extern void MAIN_showPidGain(void);
 
@@ -355,7 +355,7 @@ STATIC void dbg_showBrakeControlParam(void)
 
 STATIC void dbg_showDciBrakeParam(void)
 {
-	UARTprintf(" DC injection Brake Settings\n");
+	UARTprintf(" DC injection Brake Settings const=%f\n", dev_const.dci_pwm_rate);
 	UARTprintf("\t brake mode %d, start freq %f, block time %f\n", param.brk.method, param.brk.dci_start_freq, param.brk.dci_block_time);
 	UARTprintf("\t inject rate %f %%, time %f to brake\n", param.brk.dci_braking_rate, param.brk.dci_braking_time);
 }
@@ -387,7 +387,7 @@ STATIC void dbg_showMonitorParam(void)
 
 	float_t gOver = _IQtoF(_IQdiv(_IQ(1.0),gVbus_lpf));
 	UARTprintf("\t Iu: %f, Iv: %f, Iw: %f, DC voltage: %f\n", MAIN_getIu(), MAIN_getIv(), MAIN_getIw(), MAIN_getVdcBus());
-	UARTprintf("\t RMS Iu: %f, Iv: %f, Iw: %f\n", internal_status.Iu_rms, internal_status.Iv_rms, internal_status.Iw_rms);
+	UARTprintf("\t RMS Iu: %f, Iv: %f, Iw: %f\n", internal_status.Irms[0], internal_status.Irms[1], internal_status.Irms[2]);
 	UARTprintf("\t Volt: Vu: %f, Vv: %f, Vw: %f \n", internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst); //, MAIN_getDC_lfp());
 	UARTprintf("\t Volt: U-V: %f, V-W: %f, W-U: %f \n", (internal_status.Vu_inst - internal_status.Vv_inst), (internal_status.Vv_inst-internal_status.Vw_inst), (internal_status.Vw_inst-internal_status.Vu_inst));
 //	UARTprintf("\t input status: 0x%x, out status: 0x%x\n", (int)((mnt.dio_status>>16)&0x0F), (int)(mnt.dio_status&0x0F));
@@ -1486,7 +1486,7 @@ extern void initParam(void);
 #ifdef PWM_DUTY_TEST
 extern uint16_t gFlag_PwmTest;
 extern _iq gPwmData_Value;
-extern uint16_t gFlag_PwmStepTest;
+extern uint16_t gFlagDCIBrake;
 extern void dbg_enableSystem(void);
 extern void dbg_disableSystem(void);
 #endif
@@ -1587,13 +1587,17 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     {
     	int i;
     	extern float_t array_Iu[];
-    	UARTprintf(" Iu rms =%f \n", internal_status.Iu_rms);
+    	UARTprintf(" Irms =%f \n", MAIN_getIave());
     	for(i=0; i<I_RMS_SAMPLE_COUNT; i++)
     		UARTprintf(" int_Iu %f \n", array_Iu[i]);
     }
     else if(index == 'k')
     {
     	MAIN_showPidGain();
+    }
+    else if(index == 'v')
+    {
+    	UARTprintf("OVL warn enable=%d\n", ovl_alarm_enable);
     }
     else if(index == 't')
     {
@@ -1632,7 +1636,7 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
 
     	if(argc != 3)
     	{
-    		UARTprintf(" PWM test %d duty %f\n", gFlag_PwmTest);
+    		UARTprintf(" PWM test %d\n", gFlag_PwmTest);
     		return 0;
     	}
 
@@ -1672,27 +1676,49 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     		UARTprintf(" Pwm data error %d\n", pwm_data);
 
     }
-    else if(index == 's')
+    else if(index == 'j')
     {
     	int enable=0;
 
     	if(argc != 3)
     	{
-    		UARTprintf(" PWM step test %d\n", gFlag_PwmStepTest);
+    		UARTprintf(" PWM DC inject test %d, need >tmp p 1\n", gFlagDCIBrake);
     		return 0;
     	}
 
     	enable = atoi(argv[2]);
     	if(enable == 1)
     	{
-    		gFlag_PwmStepTest = true;
-			UARTprintf(" enable PWM Step test \n");
+			gFlagDCIBrake = true;
+			UARTprintf(" enable PWM DC inject test \n");
     	}
     	else
     	{
-    		gFlag_PwmStepTest = false;
-			UARTprintf(" disable PWM Step test \n");
+			gFlagDCIBrake = false;
+			UARTprintf(" disable PWM DC inject test \n");
     	}
+    }
+    else if(index == 'd')
+    {
+    	int16_t cur_rate=0.0;
+    	float_t pwm_f=0.0, V_duty=0.0;
+
+    	if(argc != 3)
+    	{
+    		UARTprintf(" set DCI Pwm data, need Current rate \n");
+    		return 0;
+    	}
+
+    	cur_rate = atoi(argv[2]);
+    	if(cur_rate >= 0 && cur_rate <= 200) // input duty as 0 ~ 200%
+    	{
+    		pwm_f = (float_t)(cur_rate)/100.0 * mtr.max_current*mtr.Rs*2.0;// 2*Rs for Y connection
+    		V_duty = pwm_f*100.0 / MAIN_getVdcBus();
+    		gPwmData_Value = _IQ(V_duty/100.0);
+    		UARTprintf(" DCI Pwm data %d -> V=%f, V_percent=%f\n", cur_rate, (pwm_f/100.0), V_duty);
+    	}
+    	else
+    		UARTprintf(" DCI Pwm a error %d\n", cur_rate);
     }
 #endif
 #ifdef SAMPLE_ADC_VALUE

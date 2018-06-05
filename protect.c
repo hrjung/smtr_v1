@@ -63,6 +63,13 @@
 #define REGEN_V_MARGIN			(0.9)
 #define MAX_REGEN_CURRENT		(10.0)
 
+// OVL wanrning state
+enum
+{
+	OVL_WARN_NOMAL = 0,
+	OVL_WARN_WARNING,
+};
+
 typedef struct
 {
 	//float_t dc_volt_init_relay_off;
@@ -102,7 +109,7 @@ protect_dc_st protect_dc;
 /*******************************************************************************
  * GLOBAL VARIABLES
  */
-
+int ovl_alarm_enable=0;
 
 /*******************************************************************************
  * EXTERNS
@@ -179,15 +186,88 @@ int OVL_setTripTime(int dur)
 }
 
 
-int OVL_isOverloadWarnCondition(int cur_level)
+int OVL_isOverloadWarnCondition(float_t cur_level)
 {
 	return (cur_level > dev_const.warn_level);
 }
 
-int OVL_processOverloadWarning(int cur_val)
+int OVL_processOverloadWarning(float_t cur_val)
 {
-	//TODO : need to define working scenario
+	static int ovl_state = OVL_WARN_NOMAL;
 
+	switch(ovl_state)
+	{
+	case OVL_WARN_NOMAL:
+		// check OVL_warning condition
+		if(OVL_isOverloadWarnCondition(cur_val))
+		{
+			if(!TMR_isTimerEnabled(OVERLOAD_WARN_START_TSIG))
+			{
+				//start timer
+				TMR_startTimerSig(OVERLOAD_WARN_START_TSIG, (float_t)param.protect.ovl.tr_duration);
+				UARTprintf("OVL warning started %f at %d\n", cur_val, (int)(secCnt/10));
+			}
+		}
+
+		// if timer is running, condition resolved before timeout
+		if(TMR_isTimerEnabled(OVERLOAD_WARN_START_TSIG))
+		{
+			if(!OVL_isOverloadWarnCondition(cur_val)) // condition resolved
+			{
+				TMR_disableTimerSig(OVERLOAD_WARN_START_TSIG);
+				UARTprintf("OVL warning resolved %f\n", cur_val);
+			}
+		}
+
+		// timeout -> change WARNING state
+		if(TMR_isTimeout(OVERLOAD_WARN_START_TSIG))
+		{
+			TMR_disableTimerSig(OVERLOAD_WARN_START_TSIG);
+			ovl_state = OVL_WARN_WARNING;
+			if(ovl_alarm_enable == 0)
+			{
+				UARTprintf("OVL ALARM set at %d\n", (int)(secCnt/10));
+				ovl_alarm_enable = 1; // TODO : set alarm
+			}
+		}
+		break;
+
+	case OVL_WARN_WARNING:
+		// check OVL_warning condition
+		if(!OVL_isOverloadWarnCondition(cur_val))
+		{
+			if(!TMR_isTimerEnabled(OVERLOAD_WARN_END_TSIG))
+			{
+				//start timer
+				TMR_startTimerSig(OVERLOAD_WARN_END_TSIG, (float_t)param.protect.ovl.tr_duration);
+				UARTprintf("OVL warning end started %f at %d\n", cur_val, (int)(secCnt/10));
+			}
+		}
+
+		// if timer is running, condition resolved before timeout
+		if(TMR_isTimerEnabled(OVERLOAD_WARN_END_TSIG))
+		{
+			if(OVL_isOverloadWarnCondition(cur_val)) // return to warn condition
+			{
+				TMR_disableTimerSig(OVERLOAD_WARN_END_TSIG);
+				UARTprintf("OVL warning returned %f\n", cur_val);
+			}
+		}
+
+		// timeout -> change WARNING state
+		if(TMR_isTimeout(OVERLOAD_WARN_END_TSIG))
+		{
+			TMR_disableTimerSig(OVERLOAD_WARN_END_TSIG);
+			ovl_state = OVL_WARN_NOMAL;
+
+			if(ovl_alarm_enable)
+			{
+				UARTprintf("OVL ALARM cleared at %d\n", (int)(secCnt/10));
+				ovl_alarm_enable = 0; //TODO : clear alarm
+			}
+		}
+		break;
+	}
 
 	return 0;
 }
@@ -210,7 +290,7 @@ int OVL_processOverloadTrip(float_t cur_val)
 		if(!TMR_isTimerEnabled(OVERLOAD_TRIP_TSIG))
 		{
 			//start timer
-			TMR_startTimerSig(OVERLOAD_TRIP_TSIG, param.protect.ovl.tr_duration);
+			TMR_startTimerSig(OVERLOAD_TRIP_TSIG, (float_t)param.protect.ovl.tr_duration);
 			UARTprintf("OVL trip started %f at %d\n", cur_val, (int)(secCnt/10));
 		}
 	}
@@ -557,6 +637,9 @@ int processProtection(void)
 	if(MAIN_isSystemEnabled())
 	{
 		I_rms = MAIN_getIave();
+
+		OVL_processOverloadWarning(I_rms);
+
 		if(OVL_processOverloadTrip(I_rms))
 		{
 			// overload trip enabled
