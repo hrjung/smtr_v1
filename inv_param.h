@@ -112,17 +112,17 @@ enum
 
 typedef struct
 {
-	int			enable;
+	uint16_t	enable;
 	float_t		low;		// float
 	float_t 	high;		// float
 } freq_jump_st;
 
 typedef struct
 {
-	int 	code; //TODO : need to define error code list
+	uint16_t 	code; //TODO : need to define error code list
 	float_t freq;
 	float_t current;
-	int 	op_mode; // mtr_state_e
+	uint16_t 	op_mode; // mtr_state_e
 } trip_err_st;
 
 typedef struct
@@ -132,15 +132,15 @@ typedef struct
 	float_t		decel_time;		// xx.x sec
 	freq_jump_st jump[MAX_JUMP_FREQ_NUM];
 
-	int 		vf_foc_sel;
+	uint16_t 		vf_foc_sel;
 	float_t		foc_torque_limit; // 100 ~ 220% : 180.0
 	float_t 	spd_P_gain; // 0 ~ 32767 : 1000
 	float_t 	spd_I_gain; // 0 ~ 32767 : 100
 
-	int 	energy_save; // evergy_save on/off
+	uint16_t 	energy_save; // evergy_save on/off
 	float_t	v_boost;	// 0 ~ 100.0% value of voltage for boost
 
-	int 	pwm_freq;  // cannot change in run-time
+	uint16_t 	pwm_freq;  // cannot change in run-time
 
 } drive_control_st;
 
@@ -148,9 +148,8 @@ typedef struct
 typedef struct
 {
 
-	int 		method;		// decel, DC injection, free run
-	int			time_limit;	// time limit for motor stop, if not stopped -> warning
-	float_t 	threshold;	// value of brake signal on
+	uint16_t 	method;		// decel, DC injection, free run
+	float_t 	brake_freq;	// value of brake signal on
 
 	float_t 	dci_start_freq;
 	float_t 	dci_block_time;		// 0.1 sec
@@ -161,20 +160,20 @@ typedef struct
 
 typedef struct
 {
-	int 	wr_limit;
-	int 	wr_duration;
+	uint16_t 	wr_limit;
+	uint16_t 	wr_duration;
 
-	int		enable;
-	int		tr_limit;
-	int 	tr_duration;
+	uint16_t	enable;
+	uint16_t	tr_limit;
+	uint16_t 	tr_duration;
 
 } overload_st;
 
 typedef struct
 {
 	float_t 	resistance; // 150.0 ~ 500.0
-	uint16_t 	power;		// power of regenerate resistance : 10 ~ 65535W
 	float_t		thermal;	// thermal rate : 0 ~ 6553.5kWs
+	uint16_t 	power;		// power of regenerate resistance : 10 ~ 65535W
 	uint16_t 	band;		// valid band width of regen over regen_limit
 } regen_st;
 
@@ -187,11 +186,11 @@ typedef struct
 
 
 // TODO : function not defined precisely yet
-typedef struct
-{
-	int		impact;	//suppress idle oscillation below % : 0 ~ 250
-	int 	filter; // filter time : 2 ~ 250ms
-} osc_damp_st;
+//typedef struct
+//{
+//	int		impact;	//suppress idle oscillation below % : 0 ~ 250
+//	int 	filter; // filter time : 2 ~ 250ms
+//} osc_damp_st;
 
 
 typedef struct
@@ -204,20 +203,20 @@ typedef struct
 // for speed calculation for VF
 typedef struct
 {
-	int		enable;
-	_iq		low;
-	_iq 	high;
-//	float_t low_pu;
-//	float_t high_pu;
-//	float_t low_spd;
-//	float_t high_spd;
+	uint16_t	enable;
+	_iq			low;
+	_iq 		high;
+//	float_t 	low_pu;
+//	float_t 	high_pu;
+//	float_t 	low_spd;
+//	float_t 	high_spd;
 } spd_jump_st;
 
 typedef struct
 {
 
-	int 		spd_rpm_min;
-	int			spd_rpm_max;
+	uint16_t 	spd_rpm_min;
+	uint16_t	spd_rpm_max;
 	float_t 	regen_limit;	// regen stop voltage level
 	float_t		warn_level;
 	float_t		trip_level;
@@ -232,10 +231,10 @@ typedef struct
 
 typedef struct
 {
-	int 	poles;		//USER_MOTOR_NUM_POLE_PAIRS
-	int 	effectiveness;
-	int 	input_voltage;
-	int 	rated_freq;
+	uint16_t 	poles;		//USER_MOTOR_NUM_POLE_PAIRS
+	uint16_t 	effectiveness;
+	uint16_t 	input_voltage;
+	uint16_t 	rated_freq;
 
 	float_t 	capacity;
 	float_t 	slip_rate;
@@ -257,7 +256,7 @@ typedef struct
 	brake_st		brk;
 
 	protection_st	protect;
-	osc_damp_st		osc_damp;
+	//osc_damp_st		osc_damp;
 
 	uint16_t		gear_ratio;
 	trip_err_st		err_info;

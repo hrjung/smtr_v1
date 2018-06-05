@@ -79,39 +79,29 @@ int BRK_isFreeRunEnabled(void)
 
 
 
-int BRK_setBrakeMethod(int method)
+int BRK_setBrakeMethod(uint16_t method)
 {
-	if(method < REDUCE_SPEED_BRAKE || method > FREE_RUN_BRAKE) return 1;
+	if(method > FREE_RUN_BRAKE) return 1;
 
 	param.brk.method = method;
 
-	//return EEP_updateItem(BRK_TYPE_ADDR, (unsigned char *)&param.brk.method);
 	return 0;
 }
 
-int BRK_setBrakeTIME(int limit)
+int BRK_setBrakeFreq(float_t freq)
 {
-	if(limit < 0 || limit > 60) return 1;
 
-	param.brk.time_limit = limit;
+	// freq == 0.0, then not use shaft brake
+	if(freq != 0.0 && freq < SHAFT_BRAKE_ENABLE_FREQ_MIN) return 1;
 
-	//return EEP_updateItem(BRK_TIME_ADDR, (unsigned char *)&param.brk.time_limit);
-	return 0;
-}
-
-int BRK_setThreshold(float_t freq)
-{
-	//int max_speed = 500; //max threshold
-
-	if(freq < 0.0 || freq > (float_t)MAX_REGEN_LIMIT_FREQ) return 1;
+	if(freq > SHAFT_BRAKE_ENABLE_FREQ_MAX) return 1;
 
 	// check valid range
 //	if(speed <= dev_const.spd_rpm_min || speed >= dev_const.spd_rpm_max)
 //		return 1;
 
-	param.brk.threshold = freq;
+	param.brk.brake_freq = freq;
 
-	//return EEP_updateItem(BRK_FREQ_ADDR, (unsigned char *)&param.brk.threshold);
 	return 0;
 }
 

@@ -551,25 +551,25 @@ int REGEN_process(float_t dc_volt)
 	return 0;
 }
 
-bool ovTempWarn = 0;
-bool ovTempFault = 0;
-//bool ipmFault = 0;
-
-int OSC_setDampImpact(int value)
-{
-	param.osc_damp.impact = value;
-
-	//return EEP_updateItem(OSC_DAMP_IMPACT_ADDR, (unsigned char *)&param.osc_damp.impact);
-	return 0;
-}
-
-int OSC_setDampFilter(int value)
-{
-	param.osc_damp.filter = value;
-
-	//return EEP_updateItem(OSC_DAMP_FILTER_ADDR, (unsigned char *)&param.osc_damp.filter);
-	return 0;
-}
+//bool ovTempWarn = 0;
+//bool ovTempFault = 0;
+////bool ipmFault = 0;
+//
+//int OSC_setDampImpact(int value)
+//{
+//	param.osc_damp.impact = value;
+//
+//	//return EEP_updateItem(OSC_DAMP_IMPACT_ADDR, (unsigned char *)&param.osc_damp.impact);
+//	return 0;
+//}
+//
+//int OSC_setDampFilter(int value)
+//{
+//	param.osc_damp.filter = value;
+//
+//	//return EEP_updateItem(OSC_DAMP_FILTER_ADDR, (unsigned char *)&param.osc_damp.filter);
+//	return 0;
+//}
 
 int TEMP_monitorTemperature(void)
 {

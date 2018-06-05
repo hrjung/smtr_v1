@@ -350,7 +350,7 @@ STATIC void dbg_showAccelTimeSetting(void)
 STATIC void dbg_showBrakeControlParam(void)
 {
 	UARTprintf(" Brake Control Settings\n");
-	UARTprintf("\t method %d limit %d, block time %f\n", param.brk.method, param.brk.time_limit, param.brk.threshold);
+	UARTprintf("\t method %d, brk_freq %f\n", param.brk.method, param.brk.brake_freq);
 }
 
 STATIC void dbg_showDciBrakeParam(void)
@@ -777,11 +777,11 @@ STATIC int dbg_setBrakeControl(int argc, char *argv[])
 				UARTprintf("set brake method %d is %s\n", value, brk_str[value]);
 			return result;
 		}
-		else if(strcmp(argv[1], "thld")==0)
+		else if(strcmp(argv[1], "freq")==0)
 		{
 			f_value = (float_t)(value/FREQ_INPUT_RESOLUTION);
-			result = BRK_setThreshold(f_value);
-			UARTprintf("set brake threshold freq %f is %s\n", f_value, res_str[result]);
+			result = BRK_setBrakeFreq(f_value);
+			UARTprintf("set brake start freq %f is %s\n", f_value, res_str[result]);
 			return result;
 		}
 		else

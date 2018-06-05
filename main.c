@@ -795,8 +795,7 @@ void initParam(void)
 
 	// default brake setting
 	BRK_setBrakeMethod(REDUCE_SPEED_BRAKE);
-	BRK_setBrakeTIME(5);
-	BRK_setThreshold(5.0);
+	BRK_setBrakeFreq(5.0);
 
 	BRK_setBrakeMethod(DC_INJECT_BRAKE);
 	//default Dci brake
