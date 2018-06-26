@@ -90,7 +90,6 @@ int BRK_setBrakeMethod(uint16_t method)
 
 int BRK_setBrakeFreq(float_t freq)
 {
-
 	// freq == 0.0, then not use shaft brake
 	if(freq != 0.0 && freq < SHAFT_BRAKE_ENABLE_FREQ_MIN) return 1;
 

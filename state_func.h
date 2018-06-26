@@ -54,6 +54,9 @@ extern int STA_isStopState(void);
 extern int STA_isAccelState(void);
 extern int STA_isDecelState(void);
 
+extern float_t STA_getCurrent(void);
+extern void STA_setCurrent(float_t current);
+
 extern void STA_setStopStatus(void);
 //extern float STA_getCurrentSpeed(void);
 //extern float STA_getTargetSpeed_krpm(void);
@@ -71,8 +74,9 @@ extern int STA_getFreqRange(void);
 extern float_t STA_getResolution(int flag);
 extern void STA_setResolution(int flag, float_t value);
 extern void STA_calcResolution(void);
+extern void STA_calcResolution4Reverse(void);
 extern float_t STA_getTrajResolution(void);
-extern int STA_isSameAccelRate(void);
+//extern int STA_isSameAccelRate(void);
 extern void STA_setStopCondition(void);
 
 extern int STA_control(void);

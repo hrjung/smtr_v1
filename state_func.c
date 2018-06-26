@@ -363,6 +363,15 @@ void STA_setNextFreq(float_t value)
 }
 #endif
 
+void STA_setCurrent(float_t current)
+{
+	m_status.current = current;
+}
+
+float_t STA_getCurrent(void)
+{
+	return m_status.current;
+}
 
 float_t STA_getAccelResolution(void)
 {
@@ -432,10 +441,23 @@ void STA_calcResolution(void)
 	STA_setResolution(flag, DRV_calculateAccelRate_krpm(time, diff));
 }
 
-int STA_isSameAccelRate(void)
+
+void STA_calcResolution4Reverse(void)
 {
-	return (m_status.acc_res == m_status.dec_res);
+	float_t time;
+	float_t diff = m_status.cur_freq;
+
+	time = param.ctrl.accel_time;
+	STA_setResolution(ACCEL, DRV_calculateAccelRate_krpm(time, diff));
+
+	time = param.ctrl.decel_time;
+	STA_setResolution(DECEL, DRV_calculateAccelRate_krpm(time, diff));
 }
+
+//int STA_isSameAccelRate(void)
+//{
+//	return (m_status.acc_res == m_status.dec_res);
+//}
 
 
 float_t STA_getTrajResolution(void)

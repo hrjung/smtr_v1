@@ -56,6 +56,7 @@
 #ifdef FLASH
 #pragma CODE_SECTION(mainISR,"ramfuncs");
 #pragma CODE_SECTION(timer0ISR,"ramfuncs");
+#pragma CODE_SECTION(MAIN_calculateIrms,"ramfuncs");
 #endif
 
 #include "uartstdio.h"
@@ -90,6 +91,7 @@
 #define MAIN_CONTROL_FOC	1
 
 #define KRPM_SCALE_FACTOR		(1000.0)
+
 // **************************************************************************
 // the extern function
 extern void dbg_logo(void);
@@ -287,8 +289,6 @@ _iq Iq_in = _IQ(0.0);
 
 extern uint32_t secCnt;
 
-
-
 void SetGpioInterrupt(void);
 // **************************************************************************
 // the functions
@@ -372,11 +372,19 @@ float_t MAIN_convert2Freq(float_t spd_krpm)
 _iq MAIN_getAccelRate(void)
 {
 	float_t value = STA_getTrajResolution();
+	float_t cur_speed = _IQtoF(gMotorVars.Speed_krpm);
 
-	if(value == 0.0)
-		 return gMotorVars.MaxAccel_krpmps;
+	if(cur_speed*direction < 0.0) // dir command and reducing speed
+	{
+		return _IQ(STA_getResolution(DECEL));
+	}
 	else
-		return _IQ(value);
+	{
+		if(value == 0.0)
+			 return gMotorVars.MaxAccel_krpmps;
+		else
+			return _IQ(value);
+	}
 }
 
 float_t MAIN_getVdcBus(void)
@@ -797,12 +805,12 @@ void initParam(void)
 	BRK_setBrakeMethod(REDUCE_SPEED_BRAKE);
 	BRK_setBrakeFreq(5.0);
 
-	BRK_setBrakeMethod(DC_INJECT_BRAKE);
+	//BRK_setBrakeMethod(DC_INJECT_BRAKE);
 	//default Dci brake
 	param.brk.dci_start_freq = 5.0; // start at 5Hz
-	param.brk.dci_block_time = 1.0;  // 0.5 sec
+	param.brk.dci_block_time = 0.5;  // 0.5 sec
 	param.brk.dci_braking_rate = 50.0; // 50% rate
-	param.brk.dci_braking_time = 1.0; // 1 sec brake
+	param.brk.dci_braking_time = 2.0; // 1 sec brake
 
 	// default err_info setting
 	ERR_clearTripData();
@@ -1191,9 +1199,9 @@ void main(void)
   datalog.iptr[0] = &Id_in;//&pwm_set[0];	// &gAdcData.V.value[0];
   datalog.iptr[1] = &Iq_in; //&pwm_set[1];	//&gAdcData.I.value[0];
 #endif
-  datalog.iptr[0] = &gAdcData.I.value[0];
-  datalog.iptr[1] = &gAdcData.I.value[1];
-  datalog.iptr[2] = &gAdcData.I.value[2];	//&gPwmData.Tabc.value[0];
+  datalog.iptr[0] = &gAdcData.I.value[0];  // V
+  datalog.iptr[1] = &gAdcData.I.value[1];  // W
+  datalog.iptr[2] = &gAdcData.I.value[2];  // U
 
   datalog.Flag_EnableLogData = true;
   datalog.Flag_EnableLogOneShot = false;
@@ -1859,12 +1867,12 @@ interrupt void mainISR(void)
   //process PWM for DCI brake
   MAIN_processDCBrake();
 
-  if(BRK_isFreeRunEnabled())
-  {
-	  gPwmData.Tabc.value[0] = _IQ(0.0);
-	  gPwmData.Tabc.value[1] = _IQ(0.0);
-	  gPwmData.Tabc.value[2] = _IQ(0.0);
-  }
+//  if(BRK_isFreeRunEnabled())
+//  {
+//	  gPwmData.Tabc.value[0] = _IQ(0.0);
+//	  gPwmData.Tabc.value[1] = _IQ(0.0);
+//	  gPwmData.Tabc.value[2] = _IQ(0.0);
+//  }
 
   // write the PWM compare values
   HAL_writePwmData(halHandle,&gPwmData);
@@ -1933,6 +1941,7 @@ interrupt void mainISR(void)
   {
 	  MAIN_readCurrent();
 	  MAIN_calculateIrms();
+	  STA_setCurrent(MAIN_getIave()); //Iv_rms
   }
   //UTIL_testbit(0);
 

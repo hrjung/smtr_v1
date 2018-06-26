@@ -120,9 +120,11 @@ typedef struct
 typedef struct
 {
 	uint16_t 	code; //TODO : need to define error code list
-	float_t freq;
-	float_t current;
 	uint16_t 	op_mode; // mtr_state_e
+	float_t 	freq;
+	float_t 	current;
+	uint32_t	tick_sec;
+
 } trip_err_st;
 
 typedef struct
@@ -305,6 +307,7 @@ typedef struct
 
 	float_t		accel_resol;
 	float_t		decel_resol;
+	float_t		rev_resol;
 
 	uint16_t 	ipm_temp;
 	uint16_t 	mtr_temp;

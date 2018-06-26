@@ -372,11 +372,12 @@ STATIC void dbg_showMotorParam(void)
 
 STATIC void dbg_showTripData(void)
 {
+	const char *state_str[5] = { "START", "STOP", "ACCEL", "DECEL", "RUN" };
 	UARTprintf(" Error info display\n");
 	//for(i=0; i<FAULT_HISTORY_NUM; i++)
 	{
-		UARTprintf("\t errCode: 0x%x, freq: %f, cur : %f, state=%d \n", \
-				param.err_info.code, param.err_info.freq, param.err_info.current, param.err_info.op_mode);
+		UARTprintf("\t errCode: %d, freq: %f, cur : %f, state=%s \n", \
+				param.err_info.code, param.err_info.freq, param.err_info.current, state_str[param.err_info.op_mode]);
 	}
 }
 extern int REGEN_getDuty(void);
@@ -708,14 +709,15 @@ STATIC int dbg_setDirection(int argc, char *argv[])
 	{
         if(dir == 0) //forward direction
         {
-			if(MAIN_setForwardDirection())
-				UARTprintf("set direction forward\n");
+			MAIN_setForwardDirection();
+			UARTprintf("set direction forward\n");
         }
         else
         {
-			if(MAIN_setReverseDirection())
-				UARTprintf("set direction backward\n");
+			MAIN_setReverseDirection();
+			UARTprintf("set direction backward\n");
         }
+        STA_calcResolution4Reverse();
 	}
 //	else
 //	{
@@ -731,13 +733,13 @@ dir_err:
 
 STATIC int dbg_showMotorState(int argc, char *argv[])
 {
-	char *run_str[3] = {"RVS", "STOP", "FWD"};
+	const char *state_str[5] = { "START", "STOP", "ACCEL", "DECEL", "RUN" };
 
     if(argc != 1) goto sta_err;
 
-    UARTprintf(" Running speed %d \n", MAIN_getCurrentSpeed());
+    UARTprintf(" Running speed %d, current %f\n", MAIN_getCurrentSpeed(), STA_getCurrent());
 
-    UARTprintf("Motor status %s\n", run_str[state_param.run+1]);
+    UARTprintf(" Motor status %s\n", state_str[m_status.status]);
 
     return 0;
 
