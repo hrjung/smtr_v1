@@ -218,6 +218,11 @@ typedef enum
 
 extern interrupt void mainISR(void);
 
+#ifdef SUPPORT_SPI_INTERRUPT
+extern interrupt void spiARxISR(void);
+extern interrupt void spiATxISR(void);
+#endif
+
 //hrjung add for timer0 interrupt
 #ifdef SUPPORT_TIMER0_INTERRUPT 
 extern interrupt void timer0ISR(void);
@@ -553,6 +558,11 @@ static inline void HAL_initIntVectorTable(HAL_Handle handle)
 
 #ifdef SUPPORT_TIMER0_INTERRUPT 
   pie->TINT0 = &timer0ISR; //hrjung add for timer0 interrupt
+#endif
+
+#ifdef SUPPORT_SPI_INTERRUPT
+  pie->SPIRXINTA = &spiARxISR;
+  pie->SPITXINTA = &spiATxISR;
 #endif
 
 

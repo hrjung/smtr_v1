@@ -44,11 +44,16 @@ extern "C"
 //
 //*****************************************************************************
 
-extern void spi_fifo_init(SPI_Handle spiHandle);
-extern void spi_init(SPI_Handle spiHandle);
-extern uint16_t SPI_Write8(uint16_t addr, uint16_t data);
-extern uint16_t SPI_Read8(uint16_t addr);
-extern uint16_t SPI_Read16(uint16_t chNo);
+extern void setupSpiA(SPI_Handle spiHandle);
+extern void setupSpiB(SPI_Handle spiHandle);
+
+extern uint16_t SPI_readMCU(uint16_t *rxData);
+extern uint16_t SPI_writeMCU(uint16_t *txData);
+//extern void spi_fifo_init(SPI_Handle spiHandle);
+//extern void spi_init(SPI_Handle spiHandle);
+//extern uint16_t SPI_Write8(uint16_t addr, uint16_t data);
+//extern uint16_t SPI_Read8(uint16_t addr);
+//extern uint16_t SPI_Read16(uint16_t chNo);
 
 //*****************************************************************************
 //

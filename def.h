@@ -21,6 +21,8 @@
 //timer interrupt : period 1ms
 #define SUPPORT_TIMER0_INTERRUPT
 
+#define SUPPORT_SPI_INTERRUPT
+
 
 #define SUPPORT_VF_CONTROL
 // for improve VF to be stable
