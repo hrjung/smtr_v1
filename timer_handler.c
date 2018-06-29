@@ -67,6 +67,9 @@ timer_handler_st time_sig[MAX_TIMER_TSIG];
  */
 extern HAL_Handle halHandle;
 
+#ifdef SUPPORT_AUTO_LOAD_TEST
+extern bool UTIL_readSwGpio(void);
+#endif
 extern int FREQ_setFreqValue(float_t value);
 /*
  *  ======== local function ========
@@ -160,7 +163,9 @@ interrupt void timer0ISR(void)
 	gTimerCount++;
 	if(gTimerCount%100 == 0) secCnt++; // 100ms
 
-#if 0
+#if 1
+	if(MAIN_isTripHappened())
+	{
 	if(gTimerCount%1000 == 0)
 	{
 #ifdef SUPPORT_HW_COMMON
@@ -170,6 +175,7 @@ interrupt void timer0ISR(void)
 #endif
 //    	ADC_readCurrentControl(&adc_data);
     	//UARTprintf(" %d, %d\n", (int)gTimerCount, (int)secCnt);
+	}
 	}
 #endif
 

@@ -146,6 +146,10 @@ extern void DCIB_setFlag(void);
 extern void UTIL_clearInitRelay(void);
 extern float_t UTIL_readIpmTemperature(void);
 extern float_t UTIL_readMotorTemperature(void);
+#ifdef SUPPORT_AUTO_LOAD_TEST
+extern bool UTIL_readSwGpio(void);
+extern int TEST_readSwitch(void);
+#endif
 /*******************************************************************************
  * LOCAL FUNCTIONS
  */
@@ -1611,6 +1615,15 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     	TMR_startTimerSig(TIMER_TEST_TSIG, f_dur);
     	UARTprintf(" Test Timer %f sec start at %d \n", f_dur, (int)secCnt);
     }
+#ifdef SUPPORT_AUTO_LOAD_TEST
+    else if(index == 'l')
+    {
+    	bool sw_state=0;
+    	//sw_state = UTIL_readSwGpio();
+    	sw_state = TEST_readSwitch();
+    	UARTprintf(" test SW %d \n", (int)sw_state);
+    }
+#endif
     else if(index == 'f')
     {
 #ifdef SUPPORT_REGEN_GPIO

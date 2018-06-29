@@ -72,6 +72,7 @@ extern uint32_t secCnt;
  * EXTERNS
  */
 //extern void initParam(void);
+extern int MAIN_isDirectionReversed(void);
 
 /*
  *  ======== local function ========
@@ -245,6 +246,14 @@ STATIC mtr_state_e func_run(void)
 		else if(STA_isDecelStateCond())
 			state = STATE_DECEL;
 	}
+//	else
+//	{
+//		// change direction
+//		if(MAIN_isDirectionReversed())
+//		{
+//			state = STATE_DECEL;
+//		}
+//	}
 
 	if(state != STATE_RUN)
 	{
@@ -268,6 +277,11 @@ STATIC mtr_state_e func_run(void)
 int STA_isStopState(void)
 {
 	return (m_status.status == STATE_STOP);
+}
+
+int STA_isRunState(void)
+{
+	return (m_status.status == STATE_RUN);
 }
 
 int STA_isAccelState(void)

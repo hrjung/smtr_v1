@@ -67,6 +67,8 @@
 
 #define SUPPORT_V08_HW
 
+#define SUPPORT_AUTO_LOAD_TEST
+
 
 #ifdef SUPPORT_V0_HW
 // external GPIO interrupt for IPM fault signal

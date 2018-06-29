@@ -290,6 +290,10 @@ _iq Iq_in = _IQ(0.0);
 extern uint32_t secCnt;
 
 void SetGpioInterrupt(void);
+
+#ifdef SUPPORT_AUTO_LOAD_TEST
+void processAutoLoadTest(void);
+#endif
 // **************************************************************************
 // the functions
 
@@ -369,12 +373,18 @@ float_t MAIN_convert2Freq(float_t spd_krpm)
 	return (speed_rpm*mtr.poles/60.0);
 }
 
+int MAIN_isDirectionReversed(void)
+{
+	float_t cur_speed = _IQtoF(gMotorVars.Speed_krpm);
+
+	return (cur_speed*direction < 0.0);
+}
+
 _iq MAIN_getAccelRate(void)
 {
 	float_t value = STA_getTrajResolution();
-	float_t cur_speed = _IQtoF(gMotorVars.Speed_krpm);
 
-	if(cur_speed*direction < 0.0) // dir command and reducing speed
+	if(MAIN_isDirectionReversed()) // dir command and reducing speed
 	{
 		return _IQ(STA_getResolution(DECEL));
 	}
@@ -783,7 +793,7 @@ void initParam(void)
 	memset(&param, 0, sizeof(param));
 
 	// default ctrl setting
-	param.ctrl.value = 10.0;
+	param.ctrl.value = 60.0;
 
 //	FREQ_setJumpFreqRange(0, 20.0, 50.0);
 //	FREQ_setJumpFreqRange(1, 40.0, 50.0);
@@ -1298,6 +1308,11 @@ void main(void)
   	    internal_status.ipm_temp = gAdcData.ipm_temperature;
   	    internal_status.mtr_temp = gAdcData.mtr_temperature;
 
+#ifdef SUPPORT_AUTO_LOAD_TEST
+  	    processAutoLoadTest();
+#endif
+
+
 #ifdef SAMPLE_ADC_VALUE
   	    if(sample_type == V_DC_SAMPLE_TYPE)
   	    	dbg_getSample(internal_status.Vdc_inst, 0, 0);
@@ -1599,6 +1614,10 @@ void main(void)
 
         // debug command in Motor running
         ProcessDebugCommand();
+
+#ifdef SUPPORT_AUTO_LOAD_TEST
+  	    processAutoLoadTest();
+#endif
 
       } // end of while(gFlag_enableSys) loop
 
@@ -2396,14 +2415,14 @@ void UTIL_setInitRelay(void)
 {
 	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 1;
-	HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+	//HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
 void UTIL_clearInitRelay(void)
 {
 	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_Relay);
 	internal_status.relay_enabled = 0;
-	HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+	//HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
 }
 
 void UTIL_setShaftBrake(void)
@@ -2444,6 +2463,166 @@ float_t UTIL_readMotorTemperature(void)
 {
 	return (float_t)0.0;
 }
+
+#ifdef SUPPORT_AUTO_LOAD_TEST
+enum {
+	AL_TEST_READY=0,
+	AL_TEST_CHECKING,
+	AL_TEST_WAITING,
+
+};
+
+bool UTIL_readSwGpio(void)
+{
+	return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_21);
+}
+
+
+int TEST_readSwitch(void)
+{
+	uint16_t i, sum = 0;
+	static uint16_t sw_idx=0, sw_input[10] = {0,0,0,0,0, 0,0,0,0,0};
+
+	sw_idx = sw_idx%10;
+	sw_input[sw_idx] = (uint16_t)UTIL_readSwGpio();
+	sw_idx++;
+
+	sum = 0;
+	for(i=0; i<10; i++) sum += sw_input[i];
+
+	if(sum == 10)
+		return 1;
+	else if(sum == 0)
+		return 0;
+	else
+		return 2; // ignore
+}
+
+
+void processAutoLoadTest(void)
+{
+	static int test_state=AL_TEST_READY, prev_test_state=AL_TEST_READY;
+	static int prev_btn_state=0;
+	int btn_state;
+	static uint32_t start_time=0;
+	static int dir_flag=0, stop_flag=0, start_flag=0, first_in=1, state_print=1, first_dir_in=1;
+
+	if(internal_status.relay_enabled == 0) return;
+
+	btn_state = TEST_readSwitch();
+
+	if(btn_state == 2) return; //do nothing
+
+	if(prev_btn_state == 1 && btn_state == 0) {stop_flag=1; start_flag=0;}
+
+	if(prev_btn_state == 0 && btn_state == 1) {start_flag=1; stop_flag=0;}
+
+	prev_btn_state = btn_state;
+
+	if(test_state != prev_test_state)
+	{
+		if(state_print)
+		{
+			UARTprintf("Test State %d start=%d, stop=%d, %f\n", test_state, start_flag, stop_flag, (float_t)(secCnt/10.0));
+			state_print=0;
+		}
+	}
+	else
+		state_print=1;
+
+	prev_test_state = test_state;
+
+	switch(test_state)
+	{
+	case AL_TEST_READY:
+		// start : Accel to 60Hz
+		if(start_flag)
+		{
+			MAIN_enableSystem(0);
+			STA_calcResolution();
+			UARTprintf("start running motor\n");
+			test_state = AL_TEST_CHECKING;
+			if(!MAIN_isTripHappened())
+				HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+		}
+		else
+		{
+			dir_flag=0;
+			first_in=1;
+			first_dir_in=1;
+			start_flag=0;
+			stop_flag=0;
+			if(!MAIN_isTripHappened())
+				HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+		}
+		break;
+
+	case AL_TEST_CHECKING:
+		if(STA_getTargetFreq() == 0.0) // stop condition
+		{
+			if(STA_isStopState())
+			{
+				test_state = AL_TEST_READY;
+			}
+		}
+		else
+		{
+			if(first_dir_in)
+			{
+				start_time = secCnt;
+				first_dir_in = 0;
+			}
+			else
+			{
+				if(secCnt - start_time > 100) // reverse direction takes 10 sec, wait 10 sec
+				{
+			        test_state = AL_TEST_WAITING;
+			        first_dir_in = 1;
+				}
+			}
+		}
+		break;
+
+	case AL_TEST_WAITING:
+		if(first_in)
+		{
+			start_time = secCnt;
+			first_in = 0;
+		}
+		else
+		{
+			if(secCnt - start_time > 50) // reverse direction at 5 sec
+			{
+				dir_flag = dir_flag ? 0 : 1;
+		        if(dir_flag == 0) //forward direction
+		        {
+					MAIN_setForwardDirection();
+					UARTprintf("set direction forward\n");
+		        }
+		        else
+		        {
+					MAIN_setReverseDirection();
+					UARTprintf("set direction backward\n");
+		        }
+		        STA_calcResolution4Reverse();
+		        test_state = AL_TEST_CHECKING;
+		        first_in = 1;
+			}
+
+			if(stop_flag)
+			{
+				STA_setNextFreq(0.0);
+				STA_calcResolution();
+				test_state = AL_TEST_CHECKING;
+				first_in = 1;
+				start_flag=0;
+			}
+		}
+		break;
+	}
+}
+
+#endif
 
 void MAIN_showPidGain(void)
 {
