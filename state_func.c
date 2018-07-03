@@ -456,10 +456,14 @@ void STA_calcResolution(void)
 }
 
 
-void STA_calcResolution4Reverse(void)
+void STA_calcResolution4Reverse(float_t run_freq)
 {
 	float_t time;
+#ifdef SUPPORT_AUTO_LOAD_TEST
+	float_t diff = run_freq;
+#else
 	float_t diff = m_status.cur_freq;
+#endif
 
 	time = param.ctrl.accel_time;
 	STA_setResolution(ACCEL, DRV_calculateAccelRate_krpm(time, diff));

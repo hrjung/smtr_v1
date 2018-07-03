@@ -292,6 +292,17 @@ extern uint32_t secCnt;
 void SetGpioInterrupt(void);
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
+enum {
+    AL_TEST_READY=0,
+    AL_TEST_CHECKING,
+    AL_TEST_WAITING,
+
+};
+
+#define AL_TEST_WORKING_FREQ       (20.0)
+#define AL_TEST_RUNNING_TIME       (100)
+#define AL_TEST_REVERSE_TIME       (200)
+
 void processAutoLoadTest(void);
 #endif
 // **************************************************************************
@@ -793,13 +804,13 @@ void initParam(void)
 	memset(&param, 0, sizeof(param));
 
 	// default ctrl setting
-	param.ctrl.value = 60.0;
+	param.ctrl.value = 30.0;
 
 //	FREQ_setJumpFreqRange(0, 20.0, 50.0);
 //	FREQ_setJumpFreqRange(1, 40.0, 50.0);
 
-	DRV_setAccelTime(5.0); // 10.0 sec
-	DRV_setDecelTime(5.0);
+	DRV_setAccelTime(10.0); // 10.0 sec
+	DRV_setDecelTime(10.0);
 
 	DRV_enableVfControl(); //default
 	param.ctrl.foc_torque_limit = 180.0;
@@ -832,8 +843,8 @@ void initParam(void)
 	OVL_setTripLevel(150);
 	param.protect.ovl.tr_duration = 3;
 
-	param.protect.regen.resistance = 100.0;
-	param.protect.regen.power = 400;
+	param.protect.regen.resistance = 200.0;
+	param.protect.regen.power = 200;
 	param.protect.regen.thermal = 0.0;
 	param.protect.regen.band = 0;
 
@@ -2448,7 +2459,8 @@ uint16_t UTIL_setRegenPwmDuty(int duty)
 	uint16_t user_pwm=0;
 
 
-	pwm_duty = 1.0 - (float_t)duty/100.0; // low active
+	//pwm_duty = 1.0 - (float_t)duty/100.0; // low active
+	pwm_duty = (float_t)duty/100.0; // high active
 	user_pwm = HAL_writePwmDataRegen(halHandle, _IQ(pwm_duty));
 
 	return user_pwm;
@@ -2465,12 +2477,6 @@ float_t UTIL_readMotorTemperature(void)
 }
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-enum {
-	AL_TEST_READY=0,
-	AL_TEST_CHECKING,
-	AL_TEST_WAITING,
-
-};
 
 bool UTIL_readSwGpio(void)
 {
@@ -2538,8 +2544,9 @@ void processAutoLoadTest(void)
 		// start : Accel to 60Hz
 		if(start_flag)
 		{
+		    FREQ_setFreqValue(AL_TEST_WORKING_FREQ);
 			MAIN_enableSystem(0);
-			STA_calcResolution();
+			//STA_calcResolution();
 			UARTprintf("start running motor\n");
 			test_state = AL_TEST_CHECKING;
 			if(!MAIN_isTripHappened())
@@ -2574,7 +2581,7 @@ void processAutoLoadTest(void)
 			}
 			else
 			{
-				if(secCnt - start_time > 100) // reverse direction takes 10 sec, wait 10 sec
+				if(secCnt - start_time > AL_TEST_RUNNING_TIME) // reverse direction takes 10 sec, wait 10 sec
 				{
 			        test_state = AL_TEST_WAITING;
 			        first_dir_in = 1;
@@ -2591,7 +2598,7 @@ void processAutoLoadTest(void)
 		}
 		else
 		{
-			if(secCnt - start_time > 50) // reverse direction at 5 sec
+			if(secCnt - start_time > AL_TEST_REVERSE_TIME) // stay running at 5 sec
 			{
 				dir_flag = dir_flag ? 0 : 1;
 		        if(dir_flag == 0) //forward direction
@@ -2604,7 +2611,7 @@ void processAutoLoadTest(void)
 					MAIN_setReverseDirection();
 					UARTprintf("set direction backward\n");
 		        }
-		        STA_calcResolution4Reverse();
+		        STA_calcResolution4Reverse(AL_TEST_WORKING_FREQ);
 		        test_state = AL_TEST_CHECKING;
 		        first_in = 1;
 			}

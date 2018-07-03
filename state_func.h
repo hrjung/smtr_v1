@@ -75,7 +75,7 @@ extern int STA_getFreqRange(void);
 extern float_t STA_getResolution(int flag);
 extern void STA_setResolution(int flag, float_t value);
 extern void STA_calcResolution(void);
-extern void STA_calcResolution4Reverse(void);
+extern void STA_calcResolution4Reverse(float_t run_freq);
 extern float_t STA_getTrajResolution(void);
 //extern int STA_isSameAccelRate(void);
 extern void STA_setStopCondition(void);

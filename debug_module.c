@@ -721,7 +721,7 @@ STATIC int dbg_setDirection(int argc, char *argv[])
 			MAIN_setReverseDirection();
 			UARTprintf("set direction backward\n");
         }
-        STA_calcResolution4Reverse();
+        STA_calcResolution4Reverse(m_status.cur_freq);
 	}
 //	else
 //	{
