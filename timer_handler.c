@@ -164,7 +164,9 @@ interrupt void timer0ISR(void)
 	if(gTimerCount%100 == 0) secCnt++; // 100ms
 
 #if 1
+#if SUPPORT_AUTO_LOAD_TEST
 	if(MAIN_isTripHappened())
+#endif
 	{
 	if(gTimerCount%1000 == 0)
 	{
