@@ -21,6 +21,8 @@
 //timer interrupt : period 1ms
 #define SUPPORT_TIMER0_INTERRUPT
 
+// I sensor resolution increase
+//#define SUPPORT_I_SENSOR_10A
 
 #define SUPPORT_VF_CONTROL
 // for improve VF to be stable
@@ -67,7 +69,8 @@
 
 #define SUPPORT_V08_HW
 
-#define SUPPORT_AUTO_LOAD_TEST
+//for cycle test with load, forward <-> reverse rotation
+//#define SUPPORT_AUTO_LOAD_TEST
 
 
 #ifdef SUPPORT_V0_HW
