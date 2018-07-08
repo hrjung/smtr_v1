@@ -291,10 +291,10 @@ _iq Iq_in = _IQ(0.0);
 extern uint32_t secCnt;
 
 uint16_t ret_status=1;
-uint16_t spiBuff[100];
-uint16_t spiRxFlag=0;
-extern int16_t spi_index;
-uint16_t spiRxBuf[100];
+uint16_t spiBuff[128];
+uint16_t spi_seqNo=0, prev_seqNo=0;
+extern uint16_t spiRxBuf[];
+extern uint16_t spi_chk_ok;
 
 void SetGpioInterrupt(void);
 // **************************************************************************
@@ -1025,7 +1025,6 @@ void main(void)
   // set the hardware abstraction layer parameters
   HAL_setParams(halHandle,&gUserParams);
 
-  SPI_readDataNonBlocking(SPIA_BASE);
 
 #ifdef SUPPORT_V08_HW
   //SPI-A : slave
@@ -1035,6 +1034,7 @@ void main(void)
   //SPI-B : master
 //  spi_fifo_init(halHandle->spiBHandle);
 //  spi_init(halHandle->spiBHandle);
+  SPI_enableInt(halHandle->spiAHandle);
 #endif
 
   init_test_param(); // NV data initialize, will be removed after NV enabled
@@ -1142,10 +1142,7 @@ void main(void)
   TMR_init();
 
 #ifdef SUPPORT_SPI_INTERRUPT
-  SPI_enableRxFifoInt(halHandle->spiAHandle);
-  SPI_enableInt(halHandle->spiAHandle);
-  PIE_enableInt(halHandle->pieHandle, PIE_GroupNumber_6, PIE_InterruptSource_SPIARX);
-  CPU_enableInt(halHandle->cpuHandle, CPU_IntNumber_6);
+  SPI_enableInterrupt();
 #endif
 
 #ifdef SUPPORT_VF_CONTROL
@@ -1303,33 +1300,16 @@ void main(void)
     while(!(gMotorVars.Flag_enableSys))
 	{
 #if 1
-//    	ret_status = SPI_readMCU(spi_rxBuf);
-//    	if(ret_status == 0)
-//    	{
-//    		UARTprintf("SPI received 0x%x 0x%x 0x%x 0x%x\n", (uint16_t)spi_rxBuf[0], (uint16_t)spi_rxBuf[1], (uint16_t)spi_rxBuf[2], (uint16_t)spi_rxBuf[3]);
-//    		spi_rxBuf[0] = 0;
-//    		spi_rxBuf[1] = 0;
-//    		spi_rxBuf[2] = 0;
-//    		spi_rxBuf[3] = 0;
-//    	}
-    	if(spiRxFlag && spi_index > 0)
+    	if(SPI_isPacketReceived())
     	{
-    		int i, len;
-
-    		len = (int)spi_index;
-    		for(i=0;i<len; i++) spiRxBuf[i] = spiBuff[i];
-    		for(i=0;i<len; i++)
-    		{
-    			UARTprintf("SPI %d received 0x%x\n", i, (uint16_t)spiRxBuf[i]);
-    		}
-			UARTprintf("\n");
-    		spi_index=-1;
-			spiRxFlag=0;
+//    		if((spi_chk_ok == 0 || (prev_seqNo+1) != spiRxBuf[1]) && prev_seqNo != 0)
+//    			UARTprintf("SPI seq error ! prev=%d cur=%d ok=%d\n", prev_seqNo, (uint16_t)spiRxBuf[1], spi_chk_ok);
+//    		else
+    			UARTprintf("SPI seq=%d recv ok=%d, 0x%x, 0x%x, 0x%x, 0x%x\n", (uint16_t)spiRxBuf[3], spi_chk_ok, (uint16_t)spiRxBuf[0], (uint16_t)spiRxBuf[1], (uint16_t)spiRxBuf[2], (uint16_t)spiRxBuf[3]);
+    		prev_seqNo = spiRxBuf[3];
+    		SPI_clearPacketReceived();
     	}
-    	usDelay(US_TO_CNT(700));
-//    	spi_txBuf[0] = 0x8421;
-//    	spi_txBuf[1] = 0x1248;
-//    	SPI_writeMCU(spi_txBuf);
+    	usDelay(US_TO_CNT(100));
 #endif
 
         processProtection();

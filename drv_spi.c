@@ -24,10 +24,11 @@
 //
 //*****************************************************************************
 
+#define QUEUE_SIZE  1024
 
-int16_t spi_index=-1;
-extern uint16_t spiRxFlag;
-extern uint16_t spiBuff[];
+uint16_t spiRxBuf[QUEUE_SIZE], spiTxBuf[128];
+int16_t spiRxIdx=0, spiTxIdx=0;
+uint16_t spiPacketReceived=0, tx_flag=0, txLen=0, spi_tx_cnt=0;
 extern HAL_Handle halHandle;
 
 //*****************************************************************************
@@ -36,27 +37,15 @@ extern HAL_Handle halHandle;
 //
 //*****************************************************************************
 
-#if 0
-void spi_fifo_init(SPI_Handle spiHandle)
+
+void SPI_initRxBuf(void)
 {
-    spiHandle->SPIFFTX = 0xE040;
-    spiHandle->SPIFFRX = 0x2044;        // RXFIFO Reset, RXFFINT CLR, FXFFIL2
-    spiHandle->SPIFFCT = 0x0;           // FFTXDLYx
+	int i;
+
+	for(i=0; i<QUEUE_SIZE; i++)	spiRxBuf[i] = 0;
+	for(i=0; i<128; i++) spiTxBuf[i] = i;
 }
 
-void spi_init(SPI_Handle spiHandle)
-{
-    spiHandle->SPICCR = 0x000F;         // SPI CHAR3-0, character length 16, for 8 0x0007;
-    spiHandle->SPICTL = 0x0006;         // MASTER, TALK
-    spiHandle->SPIBRR = 0x007F;         // SPIBRR, for 127, baud rate = (LSPCLK)/(SPIBRR + 1)
-    spiHandle->SPICCR = 0x009F;         // SPI SW RESET, SPILBK, SPICHAR3-0
-//    SPI_setClkPolarity(spiHandle, SPI_ClkPolarity_OutputFallingEdge_InputRisingEdge);
-    SPI_disableLoopBack(spiHandle);
-    SPI_setPriority(spiHandle, SPI_Priority_FreeRun);
-}
-#endif
-
-#if 1
 void setupSpiA(SPI_Handle spiHandle)
 {
 	// Initialize SPI FIFO registers
@@ -70,6 +59,9 @@ void setupSpiA(SPI_Handle spiHandle)
 	SPI_enableTxFifo(spiHandle);
 	SPI_disableTxFifoInt(spiHandle);
 	SPI_clearTxFifoInt(spiHandle);
+	//add for enable Tx int
+	SPI_setTxFifoIntLevel(spiHandle, SPI_FifoLevel_1_Word);
+	//SPI_enableTxFifoInt(spiHandle);
 
 	//SPIPORT.SPIFFRX.bit.RXFFOVFCLR = 1;     // clr RXFFOVF flag in SPIFFRX - 0x2042;
 //	SPIPORT.SPIFFRX.bit.RXFIFORESET = 1;      // re-enable rx fifo
@@ -116,33 +108,9 @@ void setupSpiA(SPI_Handle spiHandle)
 	SPI_setPriority(spiHandle, SPI_Priority_FreeRun);
 	SPI_setSteInv(spiHandle, SPI_SteInv_ActiveLow);
 	SPI_setTriWire(spiHandle, SPI_TriWire_NormalFourWire);
-}
-#else
-void setupSpiA(SPI_Handle spiHandle)
-{
-    SPI_reset(spiHandle);
-    SPI_setMode(spiHandle,SPI_Mode_Slave);
-    SPI_setClkPolarity(spiHandle,SPI_ClkPolarity_OutputRisingEdge_InputFallingEdge);
-    //SPI_setClkPhase(spiHandle, SPI_ClkPhase_Normal); // mode 0 0
-    //SPI_setClkPolarity(spiHandle,SPI_ClkPolarity_OutputFallingEdge_InputRisingEdge);
-    SPI_setClkPhase(spiHandle, SPI_ClkPhase_Delayed); // mode 1 1
-    SPI_enableTx(spiHandle);
-    SPI_enableTxFifoEnh(spiHandle);
-    SPI_enableTxFifo(spiHandle);
-    SPI_enableRxFifo(spiHandle);
-    SPI_enableChannels(spiHandle);
-    //SPI_setTxDelay(spiHandle,0x0020);
-    SPI_setTxDelay(spiHandle,0x00);
-    SPI_setBaudRate(spiHandle,(SPI_BaudRate_e)(0x000d)); // no effect in slave mode
-    SPI_setCharLength(spiHandle,SPI_CharLength_16_Bits); // 8 bit transfer
-    SPI_setSuspend(spiHandle,SPI_TxSuspend_free);
-    SPI_enable(spiHandle);
-    SPI_setPriority(spiHandle, SPI_Priority_FreeRun);
-    SPI_reset(spiHandle);
 
-  return;
+	SPI_initRxBuf();
 }
-#endif
 
 void setupSpiB(SPI_Handle spiHandle)
 {
@@ -220,16 +188,116 @@ uint16_t SPI_writeMCU(uint16_t *txData)
     return ret;
 }
 
+int SPI_isPacketReceived(void)
+{
+	return spiPacketReceived;
+}
+
+void SPI_clearPacketReceived(void)
+{
+	spiPacketReceived=0;
+}
+
+void SPI_enableInterrupt(void)
+{
+	  SPI_enableRxFifoInt(halHandle->spiAHandle);
+	  SPI_enableTxFifoInt(halHandle->spiAHandle);
+	  SPI_enableInt(halHandle->spiAHandle);
+	  PIE_enableInt(halHandle->pieHandle, PIE_GroupNumber_6, PIE_InterruptSource_SPIARX);
+	  PIE_enableInt(halHandle->pieHandle, PIE_GroupNumber_6, PIE_InterruptSource_SPIATX);
+	  CPU_enableInt(halHandle->cpuHandle, CPU_IntNumber_6);
+}
+
+uint16_t spi_find_first=0, spi_chk_ok=0, rx_cnt=0;
 interrupt void spiARxISR(void)
 {
 	HAL_Obj *obj = (HAL_Obj *)halHandle;
+	uint16_t i, data, checksum=0, buf[15];
 
-	HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+	data = SPI_read(halHandle->spiAHandle);
 
-	spi_index++;
-	spiBuff[spi_index] = SPI_read(halHandle->spiAHandle);
+	if(spi_find_first == 0)
+	{
+		if(spiRxIdx == 0 && data == 0xAAAA)
+		{
+			spiRxBuf[spiRxIdx++]=data;
+		}
+		else if(spiRxIdx == 1 && data == 0x5555 && spiRxBuf[0] == 0xAAAA)
+		{
+			spiRxBuf[spiRxIdx++]=data;
+			spi_find_first=1;
+		}
+		else
+			spiRxIdx=0;
+	}
+	else
+	{
+		spiRxBuf[spiRxIdx++]=data;
 
+		if(spiRxIdx >= spiRxBuf[2]) // last data
+		{
+			// verify checksum
+			for(i=0; i<spiRxIdx-1; i++) checksum += spiRxBuf[i];
+			if(checksum == spiRxBuf[spiRxIdx-1]) spi_chk_ok=1;
+			else spi_chk_ok=0;
+	#if 1
+			if(spiRxBuf[4] == 0x100 || spiRxBuf[4] == 0x80)
+			{
+				//if(spiRxBuf[2] == 0x100)  // request ACK
+				{
+					buf[0]=0x5555;
+					buf[1]=0xAAAA;
+					buf[2]=spiRxBuf[2];
+					buf[3]=spiRxBuf[3];
+					buf[4]=0x1; //ACK
+					checksum = 0;
+					for(i=0; i<5; i++) checksum += buf[i];
 
+					for(i=0; i<5; i++) spiTxBuf[i] = buf[i];
+					spiTxBuf[5] = checksum;
+					txLen = 6;
+
+				}
+	//			else if(spiRxBuf[2] == 0x80)  // report error
+	//			{
+	//				buf[0]=spiRxBuf[0];
+	//				buf[1]=spiRxBuf[1];
+	//				buf[2]=spiRxBuf[2];
+	//				buf[3]=0x1;
+	//				buf[4]=0x2;
+	//				buf[5]=0x4;
+	//				buf[6]=0x8;
+	//				buf[7]=0x10;
+	//				buf[8]=0x20;
+	//				checksum = 0;
+	//				for(i=0; i<9; i++) checksum += buf[i];
+	//
+	//				for(i=0; i<9; i++) spiTxBuf[i] = buf[i];
+	//				spiTxBuf[9] = checksum;
+	//				txLen = 10;
+	//			}
+	//			SPI_disableInt(halHandle->spiAHandle);
+	//			SPI_resetTxFifo(halHandle->spiAHandle);
+	//			SPI_enableTxFifo(halHandle->spiAHandle);
+	//			SPI_enableTxFifoInt(halHandle->spiAHandle);
+	//			SPI_disableRxFifoInt(halHandle->spiAHandle);
+	//			SPI_enableInt(halHandle->spiAHandle);
+			}
+	#endif
+
+			for(i=0; i<spiRxIdx; i++) spiRxBuf[i] = 0;
+
+			spiRxIdx = 0;
+			spi_find_first=0;
+			spiPacketReceived=1; //notify SPI data received
+
+			SPI_resetTxFifo(halHandle->spiAHandle);
+			SPI_enableTxFifo(halHandle->spiAHandle);
+		}
+	}
+	rx_cnt++;
+
+spi_rx_exit:
 	// Clr RXFIFO interrupts
 //	SPI_Regs.SPIFFRX.bit.RXFFOVFCLR = 1;
 //	SPI_Regs.SPIFFRX.bit.RXFFINTCLR = 1;
@@ -238,19 +306,39 @@ interrupt void spiARxISR(void)
 
 //	PieCtrlRegs.PIEACK.all         = PIEACK_GROUP6;    // Issue PIE ack
 	PIE_clearInt(obj->pieHandle,PIE_GroupNumber_6);
-
-	spiRxFlag=1; //notify SPI data received
 }
 
 interrupt void spiATxISR(void)
 {
+	int i;
 	HAL_Obj *obj = (HAL_Obj *)halHandle;
 
-	//HAL_toggleLed(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+	SPI_write(halHandle->spiAHandle, spiTxBuf[spiTxIdx]);
+	spiTxIdx++;
 
+	if(spiTxIdx >= txLen)
+	{
+		spiTxIdx=0;
+		txLen=0;
+		for(i=0; i<15; i++) spiTxBuf[i]=0;
+//		SPI_disableInt(halHandle->spiAHandle);
+//		SPI_resetRxFifo(halHandle->spiAHandle);
+//		SPI_enableRxFifo(halHandle->spiAHandle);
+//		SPI_disableTxFifoInt(halHandle->spiAHandle);
+//		SPI_enableRxFifoInt(halHandle->spiAHandle);
+//		SPI_enableInt(halHandle->spiAHandle);
+	}
 
+spi_tx_exit:
+
+	spi_tx_cnt++;
+	SPI_clearTxFifoInt(halHandle->spiAHandle);
 	PIE_clearInt(obj->pieHandle,PIE_GroupNumber_6);
 }
+
+
+
+
 
 #if 0
 uint16_t SPI_Write8(uint16_t addr, uint16_t data)
