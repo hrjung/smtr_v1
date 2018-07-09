@@ -651,6 +651,8 @@ void MAIN_setJumpSpeed(int index, float_t low, float_t high)
 		dev_const.spd_jmp[index].high = _IQ(high_spd*sf4krpm_pu);
 	}
 
+	dev_const.spd_jmp[index].enable = 1;
+
 //	dev_const.spd_jmp[index].low_pu = low_spd*sf4krpm_pu;
 //	dev_const.spd_jmp[index].high_pu = high_spd*sf4krpm_pu;
 //
@@ -809,8 +811,8 @@ void initParam(void)
 //	FREQ_setJumpFreqRange(0, 20.0, 50.0);
 //	FREQ_setJumpFreqRange(1, 40.0, 50.0);
 
-	DRV_setAccelTime(10.0); // 10.0 sec
-	DRV_setDecelTime(10.0);
+	DRV_setAccelTime(5.0); // 10.0 sec
+	DRV_setDecelTime(5.0);
 
 	DRV_enableVfControl(); //default
 	param.ctrl.foc_torque_limit = 180.0;
