@@ -1029,7 +1029,7 @@ STATIC int dbg_showTempStatus(int argc, char *argv[])
 
 	ipm_temp = UTIL_readIpmTemperature();
 	mtr_temp = UTIL_readMotorTemperature();
-	UARTprintf("IPM temp = %f, Motor Temp = %f\n", ipm_temp, mtr_temp);
+	UARTprintf("IPM temp = %f, %d, Motor Temp = %f\n", ipm_temp, internal_status.ipm_temp, mtr_temp);
 
 	return 0;
 

@@ -2470,7 +2470,8 @@ uint16_t UTIL_setRegenPwmDuty(int duty)
 
 float_t UTIL_readIpmTemperature(void)
 {
-	return ((float_t)internal_status.ipm_temp * 0.0328 - 13.261);
+	//return ((float_t)internal_status.ipm_temp * 0.0328 - 13.261);
+	return ((float_t)internal_status.ipm_temp * 0.0319 - 19.757);
 }
 
 float_t UTIL_readMotorTemperature(void)
