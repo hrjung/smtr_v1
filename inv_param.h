@@ -288,6 +288,8 @@ typedef struct
 	float_t 	Iw_inst;
 
 	float_t 	Irms[3];
+	float_t 	Vrms[3];
+	float_t 	Vpprms[3];
 
 	uint16_t	Iu_miss_cnt;
 	uint16_t	Iv_miss_cnt;

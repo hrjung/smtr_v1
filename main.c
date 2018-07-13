@@ -236,7 +236,9 @@ int for_rev_flag=0; //flag for forward <-> reverse drive
 uint16_t block_count=0;
 #ifdef SUPPORT_I_RMS_MEASURE
 float_t array_Iu[I_RMS_SAMPLE_COUNT], array_Iv[I_RMS_SAMPLE_COUNT], array_Iw[I_RMS_SAMPLE_COUNT];
-float_t total_Iu, total_Iv, total_Iw;
+float_t array_Vu[I_RMS_SAMPLE_COUNT], array_Vv[I_RMS_SAMPLE_COUNT], array_Vw[I_RMS_SAMPLE_COUNT];
+float_t array_Vppu[I_RMS_SAMPLE_COUNT], array_Vppv[I_RMS_SAMPLE_COUNT], array_Vppw[I_RMS_SAMPLE_COUNT];
+float_t total_Iu, total_Iv, total_Iw, total_Vu, total_Vv, total_Vw, total_Vppu, total_Vppv, total_Vppw;
 int i_pos=0;
 int i_ready_flag=0;
 #endif
@@ -299,11 +301,24 @@ enum {
 
 };
 
-#define AL_TEST_WORKING_FREQ       (20.0)
-#define AL_TEST_RUNNING_TIME       (100)
-#define AL_TEST_REVERSE_TIME       (200)
+#define AL_TEST_WORKING_FREQ        (60.0)
+#define AL_TEST_ACCEL_TIME          (20.0)
+#define AL_TEST_DECEL_TIME          (50.0)
+#define AL_TEST_RUNNING_TIME        (100)
+#define AL_TEST_REVERSE_TIME        (700)
 
 void processAutoLoadTest(void);
+#endif
+
+#ifdef SUPPORT_FULL_LOAD_TEST
+enum {
+    FL_TEST_READY=0,
+    AL_TEST_WAITING,
+    FL_TEST_RUNNING,
+
+};
+
+void processFullLoadTest(void);
 #endif
 // **************************************************************************
 // the functions
@@ -502,6 +517,14 @@ void MAIN_initIarray(void)
 		array_Iu[i] = 0.0;
 		array_Iv[i] = 0.0;
 		array_Iw[i] = 0.0;
+
+		array_Vu[i] = 0.0;
+		array_Vv[i] = 0.0;
+		array_Vw[i] = 0.0;
+
+		array_Vppu[i] = 0.0;
+		array_Vppv[i] = 0.0;
+		array_Vppw[i] = 0.0;
 	}
 	i_pos=0;
 	i_ready_flag=0;
@@ -509,12 +532,22 @@ void MAIN_initIarray(void)
 	total_Iu = 0.0;
 	total_Iv = 0.0;
 	total_Iw = 0.0;
+
+	total_Vu = 0.0;
+	total_Vv = 0.0;
+	total_Vw = 0.0;
+
+	total_Vppu = 0.0;
+	total_Vppv = 0.0;
+	total_Vppw = 0.0;
 }
 
 inline void MAIN_calculateIrms(void)
 {
 	//int i;
 	float_t bk_Iu=0.0, bk_Iw=0.0, bk_Iv=0.0;
+	float_t bk_Vu=0.0, bk_Vw=0.0, bk_Vv=0.0;
+	float_t bk_Vppu=0.0, bk_Vppw=0.0, bk_Vppv=0.0;
 
 
 	if(i_pos >= I_RMS_SAMPLE_COUNT)
@@ -527,22 +560,65 @@ inline void MAIN_calculateIrms(void)
 	bk_Iv = array_Iv[i_pos];
 	bk_Iw = array_Iw[i_pos];
 
+	bk_Vu = array_Vu[i_pos];
+	bk_Vv = array_Vv[i_pos];
+	bk_Vw = array_Vw[i_pos];
+
+	bk_Vppu = array_Vppu[i_pos];
+	bk_Vppv = array_Vppv[i_pos];
+	bk_Vppw = array_Vppw[i_pos];
+
 	array_Iu[i_pos] = internal_status.Iu_inst*internal_status.Iu_inst;
 	array_Iv[i_pos] = internal_status.Iv_inst*internal_status.Iv_inst;
 	array_Iw[i_pos] = internal_status.Iw_inst*internal_status.Iw_inst;
 
+	// phase voltage
+	array_Vu[i_pos] = internal_status.Vu_inst*internal_status.Vu_inst;
+	array_Vv[i_pos] = internal_status.Vv_inst*internal_status.Vv_inst;
+	array_Vw[i_pos] = internal_status.Vw_inst*internal_status.Vw_inst;
+
+	// phase to phase voltage
+	array_Vppu[i_pos] = (internal_status.Vu_inst-internal_status.Vv_inst)*(internal_status.Vu_inst-internal_status.Vv_inst);
+	array_Vppv[i_pos] = (internal_status.Vv_inst-internal_status.Vw_inst)*(internal_status.Vv_inst-internal_status.Vw_inst);
+	array_Vppw[i_pos] = (internal_status.Vw_inst-internal_status.Vu_inst)*(internal_status.Vw_inst-internal_status.Vu_inst);
+
 	total_Iu += array_Iu[i_pos];
 	total_Iv += array_Iv[i_pos];
 	total_Iw += array_Iw[i_pos];
+
+	total_Vu += array_Vu[i_pos];
+	total_Vv += array_Vv[i_pos];
+	total_Vw += array_Vw[i_pos];
+
+	total_Vppu += array_Vppu[i_pos];
+	total_Vppv += array_Vppv[i_pos];
+	total_Vppw += array_Vppw[i_pos];
+
 	if(i_ready_flag) // calculate RMS after array is full
 	{
 		total_Iu -= bk_Iu;
 		total_Iv -= bk_Iv;
 		total_Iw -= bk_Iw;
 
+		total_Vu -= bk_Vu;
+		total_Vv -= bk_Vv;
+		total_Vw -= bk_Vw;
+
+		total_Vppu -= bk_Vppu;
+		total_Vppv -= bk_Vppv;
+		total_Vppw -= bk_Vppw;
+
 		internal_status.Irms[0] = sqrtf(total_Iu/(float_t)I_RMS_SAMPLE_COUNT);
 		internal_status.Irms[1] = sqrtf(total_Iv/(float_t)I_RMS_SAMPLE_COUNT);
 		internal_status.Irms[2] = sqrtf(total_Iw/(float_t)I_RMS_SAMPLE_COUNT);
+
+		internal_status.Vrms[0] = sqrtf(total_Vu/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Vrms[1] = sqrtf(total_Vv/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Vrms[2] = sqrtf(total_Vw/(float_t)I_RMS_SAMPLE_COUNT);
+
+		internal_status.Vpprms[0] = sqrtf(total_Vppu/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Vpprms[1] = sqrtf(total_Vppv/(float_t)I_RMS_SAMPLE_COUNT);
+		internal_status.Vpprms[2] = sqrtf(total_Vppw/(float_t)I_RMS_SAMPLE_COUNT);
 	}
 	i_pos++;
 }
@@ -709,6 +785,14 @@ void MAIN_setDeviceConstant(void)
 	internal_status.Irms[1] = 0.0;
 	internal_status.Irms[2] = 0.0;
 
+	internal_status.Vrms[0] = 0.0;
+	internal_status.Vrms[1] = 0.0;
+	internal_status.Vrms[2] = 0.0;
+
+	internal_status.Vpprms[0] = 0.0;
+	internal_status.Vpprms[1] = 0.0;
+	internal_status.Vpprms[2] = 0.0;
+
 	internal_status.Vu_inst = 0.0;
 	internal_status.Vv_inst = 0.0;
 	internal_status.Vw_inst = 0.0;
@@ -839,10 +923,10 @@ void initParam(void)
 	ERR_clearTripData();
 
 	// default protect setting
-	OVL_setWarningLevel(120); // Samyang motor's SF=1.15
+	OVL_setWarningLevel(150); // Samyang motor's SF=1.15
 	param.protect.ovl.wr_duration = 10;
 	param.protect.ovl.enable = 1;
-	OVL_setTripLevel(150);
+	OVL_setTripLevel(180);
 	param.protect.ovl.tr_duration = 3;
 
 	param.protect.regen.resistance = 200.0;
@@ -1325,6 +1409,9 @@ void main(void)
   	    processAutoLoadTest();
 #endif
 
+#ifdef SUPPORT_FULL_LOAD_TEST
+  	    processFullLoadTest();
+#endif
 
 #ifdef SAMPLE_ADC_VALUE
   	    if(sample_type == V_DC_SAMPLE_TYPE)
@@ -1632,6 +1719,10 @@ void main(void)
   	    processAutoLoadTest();
 #endif
 
+#ifdef SUPPORT_FULL_LOAD_TEST
+        processFullLoadTest();
+#endif
+
       } // end of while(gFlag_enableSys) loop
 
     // disable the PWM
@@ -1652,7 +1743,7 @@ void main(void)
 } // end of main() function
 
 
-
+uint16_t Vinst[3];
 interrupt void mainISR(void)
 {
 #ifdef SUPPORT_VF_CONTROL
@@ -1978,6 +2069,10 @@ interrupt void mainISR(void)
   //UTIL_testbit(0);
 
 #if 1
+    Vinst[0] = gAdcData.v_adc[0];
+    Vinst[1] = gAdcData.v_adc[1];
+    Vinst[2] = gAdcData.v_adc[2];
+
   	internal_status.Vu_inst = _IQtoF(gAdcData.V.value[2])*USER_IQ_FULL_SCALE_VOLTAGE_V;
 	internal_status.Vv_inst = _IQtoF(gAdcData.V.value[0])*USER_IQ_FULL_SCALE_VOLTAGE_V;
 	internal_status.Vw_inst = _IQtoF(gAdcData.V.value[1])*USER_IQ_FULL_SCALE_VOLTAGE_V;
@@ -2479,6 +2574,181 @@ float_t UTIL_readMotorTemperature(void)
 	return (float_t)0.0;
 }
 
+#ifdef SUPPORT_FULL_LOAD_TEST
+
+bool UTIL_readSwGpio(void)
+{
+    return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_21);
+}
+
+static uint16_t sw_idx=0, sw_sum=0, sw_input[10] = {0,0,0,0,0, 0,0,0,0,0};
+int TEST_readSwitch(void)
+{
+    uint16_t i; //, sw_sum = 0;
+    //static uint16_t sw_idx=0, sw_input[10] = {0,0,0,0,0, 0,0,0,0,0};
+
+    sw_idx = sw_idx%10;
+    sw_input[sw_idx] = (uint16_t)UTIL_readSwGpio();
+    sw_idx++;
+
+    sw_sum = 0;
+    for(i=0; i<10; i++) sw_sum += sw_input[i];
+
+    if(sw_sum == 10)
+        return 1;
+    else if(sw_sum == 0)
+        return 0;
+    else
+        return 2; // ignore
+}
+
+void processFullLoadTest(void)
+{
+#if 1
+    int btn_state;
+    static int state, start_first_in=1, stop_first_in=1;
+
+    if(internal_status.relay_enabled == 0) return;
+
+    btn_state = TEST_readSwitch();
+
+    state = STA_getState();
+    switch(state)
+    {
+        case STATE_STOP:
+            if(btn_state == 1)
+            {
+                if(start_first_in)
+                {
+                    param.ctrl.accel_time = 10.0;
+                    param.ctrl.decel_time = 10.0;
+                    FREQ_setFreqValue(60.0);
+                    MAIN_enableSystem(0);
+                    UARTprintf("start running motor\n");
+                    if(!MAIN_isTripHappened())
+                        HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+
+                    start_first_in=0;
+                    stop_first_in=1;
+                }
+            }
+            else
+            {
+                if(!MAIN_isTripHappened())
+                    HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+            }
+            break;
+
+
+        case STATE_ACCEL:
+        case STATE_DECEL:
+
+            break;
+
+        case STATE_RUN:
+            if(btn_state == 0)
+            {
+                if(stop_first_in)
+                {
+                    STA_setNextFreq(0.0);
+                    STA_calcResolution();
+                    UARTprintf("Stop motor\n");
+
+                    start_first_in=1;
+                    stop_first_in=0;
+                }
+            }
+            break;
+
+    }
+
+#else
+    static int prev_btn_state=0;
+    int btn_state;
+    static int test_state=FL_TEST_READY, prev_test_state=FL_TEST_READY;
+    static int stop_flag=0, start_flag=0, state_print=1;
+
+    if(internal_status.relay_enabled == 0) return;
+
+    btn_state = TEST_readSwitch();
+
+    if(prev_btn_state == 1 && btn_state == 0) {stop_flag=1; start_flag=0;}
+
+    if(prev_btn_state == 0 && btn_state == 1) {start_flag=1; stop_flag=0;}
+
+    if(btn_state == 2) return; //do nothing
+
+
+    if(test_state != prev_test_state)
+    {
+        if(state_print)
+        {
+            UARTprintf("Test State %d start=%d, stop=%d, %f\n", test_state, start_flag, stop_flag, (float_t)(secCnt/10.0));
+            state_print=0;
+        }
+    }
+    else
+        state_print=1;
+
+    prev_test_state = test_state;
+
+    switch(test_state)
+    {
+    case FL_TEST_READY:
+        if(start_flag)
+        {
+            param.ctrl.accel_time = AL_TEST_ACCEL_TIME;
+            param.ctrl.decel_time = AL_TEST_DECEL_TIME;
+            FREQ_setFreqValue(AL_TEST_WORKING_FREQ);
+            MAIN_enableSystem(0);
+            //STA_calcResolution();
+            UARTprintf("start running motor\n");
+            test_state = FL_TEST_WAITING;
+            if(!MAIN_isTripHappened())
+                HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+        }
+        else
+        {
+            dir_flag=0;
+            first_in=1;
+            first_dir_in=1;
+            start_flag=0;
+            stop_flag=0;
+            if(!MAIN_isTripHappened())
+                HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+        }
+        break;
+
+    case FL_TEST_WAITING: // accel or decel state
+
+        if(STA_getTargetFreq() == 0.0) // stop condition
+        {
+            if(STA_isStopState())
+            {
+                test_state = FL_TEST_READY;
+            }
+        }
+
+        if(STA_isRunState())
+            test_state = FL_TEST_RUNNING;
+
+        break;
+
+    case FL_TEST_RUNNING:
+        if(stop_flag)
+        {
+            STA_setNextFreq(0.0);
+            STA_calcResolution();
+            test_state = FL_TEST_WAITING;
+            start_flag=0;
+        }
+        break;
+    }
+#endif
+}
+
+#endif
+
 #ifdef SUPPORT_AUTO_LOAD_TEST
 
 bool UTIL_readSwGpio(void)
@@ -2547,6 +2817,8 @@ void processAutoLoadTest(void)
 		// start : Accel to 60Hz
 		if(start_flag)
 		{
+		    param.ctrl.accel_time = AL_TEST_ACCEL_TIME;
+		    param.ctrl.decel_time = AL_TEST_DECEL_TIME;
 		    FREQ_setFreqValue(AL_TEST_WORKING_FREQ);
 			MAIN_enableSystem(0);
 			//STA_calcResolution();
@@ -2567,7 +2839,7 @@ void processAutoLoadTest(void)
 		}
 		break;
 
-	case AL_TEST_CHECKING:
+	case AL_TEST_CHECKING: // accel or decel period
 		if(STA_getTargetFreq() == 0.0) // stop condition
 		{
 			if(STA_isStopState())
@@ -2584,7 +2856,7 @@ void processAutoLoadTest(void)
 			}
 			else
 			{
-				if(secCnt - start_time > AL_TEST_RUNNING_TIME) // reverse direction takes 10 sec, wait 10 sec
+				if(secCnt - start_time > AL_TEST_REVERSE_TIME) // reverse direction takes 10 sec, wait 10 sec
 				{
 			        test_state = AL_TEST_WAITING;
 			        first_dir_in = 1;
@@ -2593,7 +2865,7 @@ void processAutoLoadTest(void)
 		}
 		break;
 
-	case AL_TEST_WAITING:
+	case AL_TEST_WAITING: // steady speed running
 		if(first_in)
 		{
 			start_time = secCnt;
@@ -2601,7 +2873,7 @@ void processAutoLoadTest(void)
 		}
 		else
 		{
-			if(secCnt - start_time > AL_TEST_REVERSE_TIME) // stay running at 5 sec
+			if(secCnt - start_time > AL_TEST_RUNNING_TIME) // stay running at 5 sec
 			{
 				dir_flag = dir_flag ? 0 : 1;
 		        if(dir_flag == 0) //forward direction

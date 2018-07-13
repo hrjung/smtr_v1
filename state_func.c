@@ -274,6 +274,11 @@ STATIC mtr_state_e func_run(void)
 //	return m_status.cur_rpm;
 //}
 
+int STA_getState(void)
+{
+    return m_status.status;
+}
+
 int STA_isStopState(void)
 {
 	return (m_status.status == STATE_STOP);

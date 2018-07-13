@@ -1213,6 +1213,7 @@ void HAL_setupGpios(HAL_Handle handle)
   // not used
   GPIO_setMode(obj->gpioHandle,GPIO_Number_20,GPIO_20_Mode_GeneralPurpose);
 #ifdef SUPPORT_AUTO_LOAD_TEST
+//#ifdef SUPPORT_FULL_LOAD_TEST
   // test switch input : on : run, off : stop
   GPIO_setMode(obj->gpioHandle,GPIO_Number_21,GPIO_21_Mode_GeneralPurpose);
   GPIO_setDirection(obj->gpioHandle,GPIO_Number_21,GPIO_Direction_Input);

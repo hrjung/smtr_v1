@@ -50,6 +50,7 @@ typedef struct
  */
 //extern MOTOR_working_st sta_freq;
 
+extern int STA_getState(void);
 extern int STA_isRunState(void);
 extern int STA_isStopState(void);
 extern int STA_isAccelState(void);

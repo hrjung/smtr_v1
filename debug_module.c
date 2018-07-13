@@ -128,6 +128,7 @@ extern float_t sf4pu_rpm;
 extern USER_Params gUserParams;
 extern int for_rev_flag;
 extern int ovl_alarm_enable;
+extern uint16_t Vinst[];
 
 extern float_t MAIN_getPwmFrequency(void);
 extern float_t MAIN_getIu(void);
@@ -147,6 +148,10 @@ extern void UTIL_clearInitRelay(void);
 extern float_t UTIL_readIpmTemperature(void);
 extern float_t UTIL_readMotorTemperature(void);
 #ifdef SUPPORT_AUTO_LOAD_TEST
+extern bool UTIL_readSwGpio(void);
+extern int TEST_readSwitch(void);
+#endif
+#ifdef SUPPORT_FULL_LOAD_TEST
 extern bool UTIL_readSwGpio(void);
 extern int TEST_readSwitch(void);
 #endif
@@ -393,8 +398,10 @@ STATIC void dbg_showMonitorParam(void)
 	float_t gOver = _IQtoF(_IQdiv(_IQ(1.0),gVbus_lpf));
 	UARTprintf("\t Iu: %f, Iv: %f, Iw: %f, DC voltage: %f\n", MAIN_getIu(), MAIN_getIv(), MAIN_getIw(), MAIN_getVdcBus());
 	UARTprintf("\t RMS Iu: %f, Iv: %f, Iw: %f\n", internal_status.Irms[0], internal_status.Irms[1], internal_status.Irms[2]);
-	UARTprintf("\t Volt: Vu: %f, Vv: %f, Vw: %f \n", internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst); //, MAIN_getDC_lfp());
-	UARTprintf("\t Volt: U-V: %f, V-W: %f, W-U: %f \n", (internal_status.Vu_inst - internal_status.Vv_inst), (internal_status.Vv_inst-internal_status.Vw_inst), (internal_status.Vw_inst-internal_status.Vu_inst));
+	UARTprintf("\t RMS Vu: %f, Vv: %f, Vw: %f\n", internal_status.Vrms[0], internal_status.Vrms[1], internal_status.Vrms[2]);
+	UARTprintf("\t RMS Vppu: %f, Vppv: %f, Vppw: %f\n", internal_status.Vpprms[0], internal_status.Vpprms[1], internal_status.Vpprms[2]);
+//	UARTprintf("\t Volt: Vu: %f, Vv: %f, Vw: %f \n", internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst); //, MAIN_getDC_lfp());
+//	UARTprintf("\t Volt: U-V: %f, V-W: %f, W-U: %f \n", (internal_status.Vu_inst - internal_status.Vv_inst), (internal_status.Vv_inst-internal_status.Vw_inst), (internal_status.Vw_inst-internal_status.Vu_inst));
 //	UARTprintf("\t input status: 0x%x, out status: 0x%x\n", (int)((mnt.dio_status>>16)&0x0F), (int)(mnt.dio_status&0x0F));
 	UARTprintf("\t Motor RPM: %f  Freq: %f  target %f dir=%d \n", STA_getCurSpeed(), m_status.cur_freq, m_status.target_freq, (int)m_status.direction);
 	UARTprintf("\t Motor status %d, accel: %f  decel: %f gOver=%f \n", m_status.status, m_status.acc_res, m_status.dec_res, gOver);
@@ -1603,7 +1610,9 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     }
     else if(index == 'v')
     {
-    	UARTprintf("OVL warn enable=%d\n", ovl_alarm_enable);
+    	//UARTprintf("OVL warn enable=%d\n", ovl_alarm_enable);
+    	UARTprintf(" ADC Vu=%d Vv=%d, Vw=%d\n", Vinst[0], Vinst[1], Vinst[2]);
+    	UARTprintf(" V value Vu=%f Vv=%f, Vw=%f\n", internal_status.Vu_inst, internal_status.Vv_inst, internal_status.Vw_inst);
     }
     else if(index == 't')
     {
@@ -1622,6 +1631,16 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     	//sw_state = UTIL_readSwGpio();
     	sw_state = TEST_readSwitch();
     	UARTprintf(" test SW %d \n", (int)sw_state);
+    }
+#endif
+#ifdef SUPPORT_FULL_LOAD_TEST
+    else if(index == 'l')
+    {
+        bool sw_state=0;
+        int btn_state=0;
+        sw_state = UTIL_readSwGpio();
+        btn_state = TEST_readSwitch();
+        UARTprintf(" test SW %d btn %d\n", (int)sw_state, (int)btn_state);
     }
 #endif
     else if(index == 'f')

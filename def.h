@@ -70,7 +70,9 @@
 #define SUPPORT_V08_HW
 
 //for cycle test with load, forward <-> reverse rotation
-//#define SUPPORT_AUTO_LOAD_TEST
+#define SUPPORT_AUTO_LOAD_TEST
+
+//#define SUPPORT_FULL_LOAD_TEST
 
 
 #ifdef SUPPORT_V0_HW

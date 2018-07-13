@@ -164,8 +164,11 @@ interrupt void timer0ISR(void)
 	if(gTimerCount%100 == 0) secCnt++; // 100ms
 
 #if 1
-#if SUPPORT_AUTO_LOAD_TEST
+#ifdef SUPPORT_AUTO_LOAD_TEST
 	if(MAIN_isTripHappened())
+#endif
+#ifdef SUPPORT_FULL_LOAD_TEST
+    if(MAIN_isTripHappened())
 #endif
 	{
 	if(gTimerCount%1000 == 0)
@@ -227,6 +230,10 @@ interrupt void timer0ISR(void)
 			}
 		}
 	}
+#endif
+
+#ifdef SUPPORT_AUTO_LOAD_TEST
+    if(MAIN_isTripHappened())
 #endif
 
 	if(time_sig[DCI_BRAKE_SIG_ON_TSIG].enable)
