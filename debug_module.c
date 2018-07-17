@@ -161,11 +161,7 @@ extern float_t UTIL_readIpmTemperature(void);
 extern float_t UTIL_readMotorTemperature(void);
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-extern bool UTIL_readSwGpio(void);
-extern int TEST_readSwitch(void);
-#endif
-
-#ifdef SUPPORT_FULL_LOAD_TEST
+int ipm_disp_on = 0;
 extern bool UTIL_readSwGpio(void);
 extern int TEST_readSwitch(void);
 #endif
@@ -1658,20 +1654,23 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
 #ifdef SUPPORT_AUTO_LOAD_TEST
     else if(index == 'l')
     {
-    	bool sw_state=0;
-    	//sw_state = UTIL_readSwGpio();
-    	sw_state = TEST_readSwitch();
-    	UARTprintf(" test SW %d \n", (int)sw_state);
-    }
-#endif
-#ifdef SUPPORT_FULL_LOAD_TEST
-    else if(index == 'l')
-    {
         bool sw_state=0;
         int btn_state=0;
         sw_state = UTIL_readSwGpio();
         btn_state = TEST_readSwitch();
         UARTprintf(" test SW %d btn %d\n", (int)sw_state, (int)btn_state);
+    }
+    else if(index == 'i')
+    {
+    	int enable;
+
+    	enable = atoi(argv[2]);
+    	if(enable)
+    		ipm_disp_on = 1;
+    	else
+    		ipm_disp_on = 0;
+
+    	UARTprintf(" IPM temperature periodic display enable=%d\n", ipm_disp_on);
     }
 #endif
     else if(index == 'f')

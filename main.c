@@ -314,17 +314,9 @@ enum {
 #define AL_TEST_RUNNING_TIME        (100)
 #define AL_TEST_REVERSE_TIME        (700)
 
+int load_test_type=0;  // 0: FULL_LOAD_TEST, 1: AUTO_LOAD_TEST
+
 void processAutoLoadTest(void);
-#endif
-
-#ifdef SUPPORT_FULL_LOAD_TEST
-enum {
-    FL_TEST_READY=0,
-    AL_TEST_WAITING,
-    FL_TEST_RUNNING,
-
-};
-
 void processFullLoadTest(void);
 #endif
 // **************************************************************************
@@ -1435,11 +1427,10 @@ void main(void)
   	    internal_status.mtr_temp = gAdcData.mtr_temperature;
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-  	    processAutoLoadTest();
-#endif
-
-#ifdef SUPPORT_FULL_LOAD_TEST
-  	    processFullLoadTest();
+  	    if(load_test_type)
+  	    	processAutoLoadTest();
+  	    else
+  	    	processFullLoadTest();
 #endif
 
 #ifdef SAMPLE_ADC_VALUE
@@ -1745,11 +1736,10 @@ void main(void)
         ProcessDebugCommand();
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-  	    processAutoLoadTest();
-#endif
-
-#ifdef SUPPORT_FULL_LOAD_TEST
-        processFullLoadTest();
+  	    if(load_test_type)
+  	    	processAutoLoadTest();
+  	    else
+  	    	processFullLoadTest();
 #endif
 
       } // end of while(gFlag_enableSys) loop
@@ -2566,188 +2556,12 @@ float_t UTIL_readMotorTemperature(void)
 	return (float_t)0.0;
 }
 
-#ifdef SUPPORT_FULL_LOAD_TEST
 
+#ifdef SUPPORT_AUTO_LOAD_TEST
 bool UTIL_readSwGpio(void)
 {
     return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_21);
 }
-
-static uint16_t sw_idx=0, sw_sum=0, sw_input[10] = {0,0,0,0,0, 0,0,0,0,0};
-int TEST_readSwitch(void)
-{
-    uint16_t i; //, sw_sum = 0;
-    //static uint16_t sw_idx=0, sw_input[10] = {0,0,0,0,0, 0,0,0,0,0};
-
-    sw_idx = sw_idx%10;
-    sw_input[sw_idx] = (uint16_t)UTIL_readSwGpio();
-    sw_idx++;
-
-    sw_sum = 0;
-    for(i=0; i<10; i++) sw_sum += sw_input[i];
-
-    if(sw_sum == 10)
-        return 1;
-    else if(sw_sum == 0)
-        return 0;
-    else
-        return 2; // ignore
-}
-
-void processFullLoadTest(void)
-{
-#if 1
-    int btn_state;
-    static int state, start_first_in=1, stop_first_in=1;
-
-    if(internal_status.relay_enabled == 0) return;
-
-    btn_state = TEST_readSwitch();
-
-    state = STA_getState();
-    switch(state)
-    {
-        case STATE_STOP:
-            if(btn_state == 1)
-            {
-                if(start_first_in)
-                {
-                    param.ctrl.accel_time = 10.0;
-                    param.ctrl.decel_time = 10.0;
-                    FREQ_setFreqValue(60.0);
-                    MAIN_enableSystem(0);
-                    UARTprintf("start running motor\n");
-                    if(!MAIN_isTripHappened())
-                        HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-
-                    start_first_in=0;
-                    stop_first_in=1;
-                }
-            }
-            else
-            {
-                if(!MAIN_isTripHappened())
-                    HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-            }
-            break;
-
-
-        case STATE_ACCEL:
-        case STATE_DECEL:
-
-            break;
-
-        case STATE_RUN:
-            if(btn_state == 0)
-            {
-                if(stop_first_in)
-                {
-                    STA_setNextFreq(0.0);
-                    STA_calcResolution();
-                    UARTprintf("Stop motor\n");
-
-                    start_first_in=1;
-                    stop_first_in=0;
-                }
-            }
-            break;
-
-    }
-
-#else
-    static int prev_btn_state=0;
-    int btn_state;
-    static int test_state=FL_TEST_READY, prev_test_state=FL_TEST_READY;
-    static int stop_flag=0, start_flag=0, state_print=1;
-
-    if(internal_status.relay_enabled == 0) return;
-
-    btn_state = TEST_readSwitch();
-
-    if(prev_btn_state == 1 && btn_state == 0) {stop_flag=1; start_flag=0;}
-
-    if(prev_btn_state == 0 && btn_state == 1) {start_flag=1; stop_flag=0;}
-
-    if(btn_state == 2) return; //do nothing
-
-
-    if(test_state != prev_test_state)
-    {
-        if(state_print)
-        {
-            UARTprintf("Test State %d start=%d, stop=%d, %f\n", test_state, start_flag, stop_flag, (float_t)(secCnt/10.0));
-            state_print=0;
-        }
-    }
-    else
-        state_print=1;
-
-    prev_test_state = test_state;
-
-    switch(test_state)
-    {
-    case FL_TEST_READY:
-        if(start_flag)
-        {
-            param.ctrl.accel_time = AL_TEST_ACCEL_TIME;
-            param.ctrl.decel_time = AL_TEST_DECEL_TIME;
-            FREQ_setFreqValue(AL_TEST_WORKING_FREQ);
-            MAIN_enableSystem(0);
-            //STA_calcResolution();
-            UARTprintf("start running motor\n");
-            test_state = FL_TEST_WAITING;
-            if(!MAIN_isTripHappened())
-                HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-        }
-        else
-        {
-            dir_flag=0;
-            first_in=1;
-            first_dir_in=1;
-            start_flag=0;
-            stop_flag=0;
-            if(!MAIN_isTripHappened())
-                HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-        }
-        break;
-
-    case FL_TEST_WAITING: // accel or decel state
-
-        if(STA_getTargetFreq() == 0.0) // stop condition
-        {
-            if(STA_isStopState())
-            {
-                test_state = FL_TEST_READY;
-            }
-        }
-
-        if(STA_isRunState())
-            test_state = FL_TEST_RUNNING;
-
-        break;
-
-    case FL_TEST_RUNNING:
-        if(stop_flag)
-        {
-            STA_setNextFreq(0.0);
-            STA_calcResolution();
-            test_state = FL_TEST_WAITING;
-            start_flag=0;
-        }
-        break;
-    }
-#endif
-}
-
-#endif
-
-#ifdef SUPPORT_AUTO_LOAD_TEST
-
-bool UTIL_readSwGpio(void)
-{
-	return HAL_readGpio(halHandle,(GPIO_Number_e)GPIO_Number_21);
-}
-
 
 int TEST_readSwitch(void)
 {
@@ -2894,6 +2708,65 @@ void processAutoLoadTest(void)
 		}
 		break;
 	}
+}
+
+void processFullLoadTest(void)
+{
+    int btn_state;
+    static int state, start_first_in=1, stop_first_in=1;
+
+    if(internal_status.relay_enabled == 0) return;
+
+    btn_state = TEST_readSwitch();
+
+    state = STA_getState();
+    switch(state)
+    {
+        case STATE_STOP:
+            if(btn_state == 1)
+            {
+                if(start_first_in)
+                {
+                    param.ctrl.accel_time = 10.0;
+                    param.ctrl.decel_time = 10.0;
+                    FREQ_setFreqValue(60.0);
+                    MAIN_enableSystem(0);
+                    UARTprintf("start running motor\n");
+                    if(!MAIN_isTripHappened())
+                        HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+
+                    start_first_in=0;
+                    stop_first_in=1;
+                }
+            }
+            else
+            {
+                if(!MAIN_isTripHappened())
+                    HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
+            }
+            break;
+
+
+        case STATE_ACCEL:
+        case STATE_DECEL:
+
+            break;
+
+        case STATE_RUN:
+            if(btn_state == 0)
+            {
+                if(stop_first_in)
+                {
+                    STA_setNextFreq(0.0);
+                    STA_calcResolution();
+                    UARTprintf("Stop motor\n");
+
+                    start_first_in=1;
+                    stop_first_in=0;
+                }
+            }
+            break;
+    }
 }
 
 #endif

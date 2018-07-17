@@ -68,7 +68,7 @@ timer_handler_st time_sig[MAX_TIMER_TSIG];
 extern HAL_Handle halHandle;
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-extern bool UTIL_readSwGpio(void);
+extern int ipm_disp_on;
 #endif
 extern int FREQ_setFreqValue(float_t value);
 /*
@@ -167,9 +167,6 @@ interrupt void timer0ISR(void)
 #ifdef SUPPORT_AUTO_LOAD_TEST
 	if(MAIN_isTripHappened())
 #endif
-#ifdef SUPPORT_FULL_LOAD_TEST
-    if(MAIN_isTripHappened())
-#endif
 	{
 	if(gTimerCount%1000 == 0)
 	{
@@ -233,7 +230,17 @@ interrupt void timer0ISR(void)
 #endif
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
-    if(MAIN_isTripHappened())
+    // periodic display
+	if(ipm_disp_on)
+	{
+		if(gTimerCount%1000 == 10)
+		{
+			float_t ipm_temp;
+
+			ipm_temp = UTIL_readIpmTemperature();
+			UARTprintf("IPM temp = %f,  %d\n", ipm_temp, (int)secCnt);
+		}
+	}
 #endif
 
 	if(time_sig[DCI_BRAKE_SIG_ON_TSIG].enable)
