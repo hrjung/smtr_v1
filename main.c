@@ -291,10 +291,8 @@ _iq Iq_in = _IQ(0.0);
 extern uint32_t secCnt;
 
 uint16_t ret_status=1;
-uint16_t spiBuff[128];
 uint16_t spi_seqNo=0, prev_seqNo=0;
-extern uint16_t spiRxBuf[];
-extern uint16_t spi_chk_ok;
+extern uint16_t spi_chk_ok, rx_seq_no, spi_checksum;
 
 void SetGpioInterrupt(void);
 // **************************************************************************
@@ -1305,8 +1303,8 @@ void main(void)
 //    		if((spi_chk_ok == 0 || (prev_seqNo+1) != spiRxBuf[1]) && prev_seqNo != 0)
 //    			UARTprintf("SPI seq error ! prev=%d cur=%d ok=%d\n", prev_seqNo, (uint16_t)spiRxBuf[1], spi_chk_ok);
 //    		else
-    			UARTprintf("SPI seq=%d recv ok=%d, 0x%x, 0x%x, 0x%x, 0x%x\n", (uint16_t)spiRxBuf[3], spi_chk_ok, (uint16_t)spiRxBuf[0], (uint16_t)spiRxBuf[1], (uint16_t)spiRxBuf[2], (uint16_t)spiRxBuf[3]);
-    		prev_seqNo = spiRxBuf[3];
+    			UARTprintf("SPI seq=%d recv ok=%d 0x%x\n", rx_seq_no, spi_chk_ok, spi_checksum);
+    		prev_seqNo = rx_seq_no;
     		SPI_clearPacketReceived();
     	}
     	usDelay(US_TO_CNT(100));
@@ -2382,43 +2380,6 @@ float_t MAIN_getPwmFrequency(void)
 #else
 	return USER_PWM_FREQ_kHz;
 #endif
-}
-
-int UTIL_controlLed(int type, int on_off)
-{
-	int result = 0;
-
-	if(type == HAL_Gpio_LED_R || type == HAL_Gpio_LED_G)
-	{
-		if(on_off == 1)
-			HAL_setGpioHigh(halHandle,(GPIO_Number_e)type);
-		else
-			HAL_setGpioLow(halHandle,(GPIO_Number_e)type);
-	}
-	else
-	{
-		UARTprintf("Error : no LED type=%d \n", type);
-		result = 1;
-	}
-
-	return result;
-}
-
-// TODO : debug purpose only, using LED_R2 as test bit
-void UTIL_testbit(int on_off) // LD2
-{
-	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-}
-
-void UTIL_testbitG(int on_off) // LD1
-{
-	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
-	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 }
 
 void UTIL_setInitRelay(void)

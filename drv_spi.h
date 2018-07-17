@@ -35,7 +35,27 @@ extern "C"
 // the transmit and receive buffers respectively.
 //
 //*****************************************************************************
-//#define
+
+#define SPI_NAK		(0x0000)
+#define SPI_ACK		(0x0001)
+
+
+#define SPICMD_CTRL_RUN		(0x0001)
+#define SPICMD_CTRL_STOP	(0x0002)
+#define SPICMD_CTRL_DIR_F	(0x0004)
+#define SPICMD_CTRL_DIR_R	(0x0008)
+
+#define SPICMD_PARAM_W		(0x0010)
+#define SPICMD_PARAM_R		(0x0020)
+
+#define SPICMD_REQ_ST		(0x0040)
+#define SPICMD_REQ_ERR		(0x0080)
+
+
+#define SPICMD_RESP_ACK		(0x0100)
+#define SPICMD_RESP_ST		(0x0200)
+#define SPICMD_RESP_ERR		(0x0400)
+#define SPICMD_RESP_PARAM	(0x0800)
 
 
 //*****************************************************************************

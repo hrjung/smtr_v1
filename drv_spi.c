@@ -16,7 +16,7 @@
 #include <Assert.h>
 #include "drv_spi.h"
 #include "spi.h"
-
+#include "common_tools.h"
 //*****************************************************************************
 //
 //! \addtogroup modebus_api
@@ -24,11 +24,24 @@
 //
 //*****************************************************************************
 
-#define QUEUE_SIZE  1024
+#define QUEUE_SIZE  64
 
-uint16_t spiRxBuf[QUEUE_SIZE], spiTxBuf[128];
-int16_t spiRxIdx=0, spiTxIdx=0;
-uint16_t spiPacketReceived=0, tx_flag=0, txLen=0, spi_tx_cnt=0;
+typedef struct
+{
+	uint16_t buf[QUEUE_SIZE];
+	uint16_t idx;
+	uint16_t cnt;
+} spi_queue_st;
+
+spi_queue_st spiRx, spiTx;
+
+//uint16_t spiRxBuf[QUEUE_SIZE], spiTxBuf[QUEUE_SIZE];
+//int16_t spiRxIdx=0, spiTxIdx=0;
+uint16_t spiPacketReceived=0, rx_seq_no, txLen=0;
+//uint16_t spi_tx_cnt=0, spi_rx_cnt=0;
+uint16_t spi_find_first=0, spi_chk_ok=0;
+uint16_t spi_checksum=0;
+
 extern HAL_Handle halHandle;
 
 //*****************************************************************************
@@ -37,13 +50,16 @@ extern HAL_Handle halHandle;
 //
 //*****************************************************************************
 
-
 void SPI_initRxBuf(void)
 {
 	int i;
 
-	for(i=0; i<QUEUE_SIZE; i++)	spiRxBuf[i] = 0;
-	for(i=0; i<128; i++) spiTxBuf[i] = i;
+	spiRx.idx=0;
+	spiRx.cnt=0;
+	spiTx.idx=0;
+	spiTx.cnt=0;
+	for(i=0; i<QUEUE_SIZE; i++)	spiRx.buf[i] = 0;
+	for(i=0; i<QUEUE_SIZE; i++) spiTx.buf[i] = i;
 }
 
 void setupSpiA(SPI_Handle spiHandle)
@@ -60,7 +76,8 @@ void setupSpiA(SPI_Handle spiHandle)
 	SPI_disableTxFifoInt(spiHandle);
 	SPI_clearTxFifoInt(spiHandle);
 	//add for enable Tx int
-	SPI_setTxFifoIntLevel(spiHandle, SPI_FifoLevel_1_Word);
+	//SPI_setTxFifoIntLevel(spiHandle, SPI_FifoLevel_1_Word);
+	SPI_setTxFifoIntLevel(spiHandle, SPI_FifoLevel_Empty);
 	//SPI_enableTxFifoInt(spiHandle);
 
 	//SPIPORT.SPIFFRX.bit.RXFFOVFCLR = 1;     // clr RXFFOVF flag in SPIFFRX - 0x2042;
@@ -95,6 +112,7 @@ void setupSpiA(SPI_Handle spiHandle)
 	SPI_setMode(spiHandle,SPI_Mode_Slave);
 	SPI_disableOverRunInt(spiHandle);
 	SPI_enableTx(spiHandle);
+	//SPI_disableTx(spiHandle); // disable Tx until Rx completed
 	SPI_disableInt(spiHandle);
 
 	//SPIPORT.SPIBRR =0x00F;                    // Baud rate
@@ -129,6 +147,7 @@ void setupSpiB(SPI_Handle spiHandle)
   return;
 }
 
+#if 0
 //function for reading from spi
 uint16_t SPI_readMCU(uint16_t *rxData)
 {
@@ -187,6 +206,7 @@ uint16_t SPI_writeMCU(uint16_t *txData)
 
     return ret;
 }
+#endif
 
 int SPI_isPacketReceived(void)
 {
@@ -208,96 +228,162 @@ void SPI_enableInterrupt(void)
 	  CPU_enableInt(halHandle->cpuHandle, CPU_IntNumber_6);
 }
 
-uint16_t spi_find_first=0, spi_chk_ok=0, rx_cnt=0;
+void SPI_makeStatusResponse(uint16_t seq_no)
+{
+
+}
+
+void SPI_makeErrorResponse(uint16_t seq_no)
+{
+
+}
+
+void SPI_makeParamResponse(uint16_t seq_no, uint16_t index)
+{
+	uint16_t i, checksum=0;
+	uint16_t buf[10];
+
+	txLen = 9;
+	buf[0] = 0xAAAA;
+	buf[1] = 0x5555;
+	buf[2] = txLen;
+	buf[3] = seq_no;
+	buf[4] = SPICMD_RESP_PARAM;
+	buf[5] = index;
+	UTIL_packingParam(index, (uint16_t *)&buf[6]);
+
+	for(i=0; i<txLen-1; i++) checksum += buf[i];
+	buf[txLen-1] = checksum;
+
+	for(i=0; i<txLen; i++) spiTx.buf[i] = buf[i];
+}
+
+void SPI_makeResponse(uint16_t seq_no, uint16_t resp)
+{
+	uint16_t i, checksum=0;
+	uint16_t buf[10];
+
+	txLen = 7;
+	buf[0] = 0xAAAA;
+	buf[1] = 0x5555;
+	buf[2] = txLen;
+	buf[3] = seq_no;
+	buf[4] = SPICMD_RESP_ACK;
+	buf[5] = resp;
+
+	for(i=0; i<txLen-1; i++) checksum += buf[i];
+	buf[6] = checksum;
+	for(i=0; i<txLen; i++) spiTx.buf[i] = buf[i];
+
+}
+
 interrupt void spiARxISR(void)
 {
 	HAL_Obj *obj = (HAL_Obj *)halHandle;
-	uint16_t i, data, checksum=0, buf[15];
+	uint16_t i, data, seq_no, cmd, checksum=0;
+
+	UTIL_testbit(1);
 
 	data = SPI_read(halHandle->spiAHandle);
 
 	if(spi_find_first == 0)
 	{
-		if(spiRxIdx == 0 && data == 0xAAAA)
+		if(spiRx.idx == 0 && data == 0xAAAA)
 		{
-			spiRxBuf[spiRxIdx++]=data;
+			spiRx.buf[spiRx.idx++]=data;
 		}
-		else if(spiRxIdx == 1 && data == 0x5555 && spiRxBuf[0] == 0xAAAA)
+		else if(spiRx.idx == 1 && data == 0x5555 && spiRx.buf[0] == 0xAAAA)
 		{
-			spiRxBuf[spiRxIdx++]=data;
+			spiRx.buf[spiRx.idx++]=data;
 			spi_find_first=1;
 		}
 		else
-			spiRxIdx=0;
+			spiRx.idx=0;
 	}
 	else
 	{
-		spiRxBuf[spiRxIdx++]=data;
+		spiRx.buf[spiRx.idx++]=data;
 
-		if(spiRxIdx >= spiRxBuf[2]) // last data
+		if(spiRx.idx >= spiRx.buf[2]) // last data
 		{
 			// verify checksum
-			for(i=0; i<spiRxIdx-1; i++) checksum += spiRxBuf[i];
-			if(checksum == spiRxBuf[spiRxIdx-1]) spi_chk_ok=1;
+			for(i=0; i<spiRx.idx-1; i++) checksum += spiRx.buf[i];
+			if(checksum == spiRx.buf[spiRx.idx-1]) spi_chk_ok=1;
 			else spi_chk_ok=0;
-	#if 1
+#if 1
+			seq_no = spiRx.buf[3];
+			cmd = spiRx.buf[4]&0x00FF;
+			if(cmd&0x001F) // command
+			{
+				switch(cmd&0x001F)
+				{
+				case SPICMD_CTRL_RUN:
+				case SPICMD_CTRL_STOP:
+				case SPICMD_CTRL_DIR_F:
+				case SPICMD_CTRL_DIR_R:
+					break;
+
+				case SPICMD_PARAM_W:
+
+					break;
+				}
+
+				//generate ack response
+				SPI_makeResponse(seq_no, SPI_ACK);
+
+			}
+			else if(cmd&0x00E0) // status request
+			{
+				switch(cmd&0x00E0)
+				{
+				case SPICMD_REQ_ST:
+					SPI_makeStatusResponse(seq_no);
+					break;
+
+				case SPICMD_REQ_ERR:
+					SPI_makeErrorResponse(seq_no);
+					break;
+
+				case SPICMD_PARAM_R:
+					SPI_makeParamResponse(seq_no, spiRx.buf[5]);
+				}
+
+			}
+			else
+			{
+				//NAK response
+				SPI_makeResponse(seq_no, SPI_NAK); // seq no
+			}
+#else
 			if(spiRxBuf[4] == 0x100 || spiRxBuf[4] == 0x80)
 			{
 				//if(spiRxBuf[2] == 0x100)  // request ACK
 				{
-					buf[0]=0x5555;
-					buf[1]=0xAAAA;
-					buf[2]=spiRxBuf[2];
-					buf[3]=spiRxBuf[3];
-					buf[4]=0x1; //ACK
-					checksum = 0;
-					for(i=0; i<5; i++) checksum += buf[i];
-
-					for(i=0; i<5; i++) spiTxBuf[i] = buf[i];
-					spiTxBuf[5] = checksum;
-					txLen = 6;
-
+					SPI_makeResponse(spiRx.buf[3], SPI_ACK);
 				}
-	//			else if(spiRxBuf[2] == 0x80)  // report error
-	//			{
-	//				buf[0]=spiRxBuf[0];
-	//				buf[1]=spiRxBuf[1];
-	//				buf[2]=spiRxBuf[2];
-	//				buf[3]=0x1;
-	//				buf[4]=0x2;
-	//				buf[5]=0x4;
-	//				buf[6]=0x8;
-	//				buf[7]=0x10;
-	//				buf[8]=0x20;
-	//				checksum = 0;
-	//				for(i=0; i<9; i++) checksum += buf[i];
-	//
-	//				for(i=0; i<9; i++) spiTxBuf[i] = buf[i];
-	//				spiTxBuf[9] = checksum;
-	//				txLen = 10;
-	//			}
-	//			SPI_disableInt(halHandle->spiAHandle);
-	//			SPI_resetTxFifo(halHandle->spiAHandle);
-	//			SPI_enableTxFifo(halHandle->spiAHandle);
-	//			SPI_enableTxFifoInt(halHandle->spiAHandle);
-	//			SPI_disableRxFifoInt(halHandle->spiAHandle);
-	//			SPI_enableInt(halHandle->spiAHandle);
 			}
-	#endif
 
-			for(i=0; i<spiRxIdx; i++) spiRxBuf[i] = 0;
+#endif
 
-			spiRxIdx = 0;
+			for(i=0; i<spiRx.idx; i++) spiRx.buf[i] = 0;
+
+			spiRx.idx = 0;
 			spi_find_first=0;
 			spiPacketReceived=1; //notify SPI data received
+			rx_seq_no = seq_no;
+			spi_checksum = checksum;
 
-			SPI_resetTxFifo(halHandle->spiAHandle);
-			SPI_enableTxFifo(halHandle->spiAHandle);
+//			SPI_resetTxFifo(halHandle->spiAHandle);
+//			SPI_enableTxFifo(halHandle->spiAHandle);
+			// write 1st word for next transmit
+//			spiTxIdx=0;
+//			SPI_write(halHandle->spiAHandle, spiTxBuf[spiTxIdx]);
+//			spiTxIdx++;
+			//SPI_enableTx(halHandle->spiAHandle);
 		}
 	}
-	rx_cnt++;
+	spiRx.cnt++;
 
-spi_rx_exit:
 	// Clr RXFIFO interrupts
 //	SPI_Regs.SPIFFRX.bit.RXFFOVFCLR = 1;
 //	SPI_Regs.SPIFFRX.bit.RXFFINTCLR = 1;
@@ -306,6 +392,8 @@ spi_rx_exit:
 
 //	PieCtrlRegs.PIEACK.all         = PIEACK_GROUP6;    // Issue PIE ack
 	PIE_clearInt(obj->pieHandle,PIE_GroupNumber_6);
+
+	UTIL_testbit(0);
 }
 
 interrupt void spiATxISR(void)
@@ -313,14 +401,15 @@ interrupt void spiATxISR(void)
 	int i;
 	HAL_Obj *obj = (HAL_Obj *)halHandle;
 
-	SPI_write(halHandle->spiAHandle, spiTxBuf[spiTxIdx]);
-	spiTxIdx++;
+	SPI_write(halHandle->spiAHandle, spiTx.buf[spiTx.idx]);
+	spiTx.idx++;
 
-	if(spiTxIdx >= txLen)
+	if(spiTx.idx >= txLen)
 	{
-		spiTxIdx=0;
+		spiTx.idx=0;
 		txLen=0;
-		for(i=0; i<15; i++) spiTxBuf[i]=0;
+		for(i=0; i<15; i++) spiTx.buf[i]=0;
+		//SPI_disableTx(halHandle->spiAHandle);
 //		SPI_disableInt(halHandle->spiAHandle);
 //		SPI_resetRxFifo(halHandle->spiAHandle);
 //		SPI_enableRxFifo(halHandle->spiAHandle);
@@ -329,55 +418,11 @@ interrupt void spiATxISR(void)
 //		SPI_enableInt(halHandle->spiAHandle);
 	}
 
-spi_tx_exit:
-
-	spi_tx_cnt++;
+	spiTx.cnt++;
 	SPI_clearTxFifoInt(halHandle->spiAHandle);
 	PIE_clearInt(obj->pieHandle,PIE_GroupNumber_6);
 }
 
-
-
-
-
-#if 0
-uint16_t SPI_Write8(uint16_t addr, uint16_t data)
-{
-    uint16_t adata;
-    uint16_t rdata;
-
-    adata = ((addr << 8) & 0xFF00) | (data & 0x00FF);
-    SPI_write(halHandle->spiBHandle, adata);
-    while(SPI_getRxFifoStatus(halHandle->spiBHandle) != 1) { }
-    rdata = SPI_read(halHandle->spiBHandle);
-
-    return rdata;
-}
-
-uint16_t SPI_Read8(uint16_t addr)
-{
-    uint16_t rdata;
-
-    addr = (0x80 | addr) << 8;
-    SPI_write(halHandle->spiBHandle, addr);
-    while(SPI_getRxFifoStatus(halHandle->spiBHandle) != 1) { }
-    rdata = SPI_read(halHandle->spiBHandle);
-    return (0x00FF & rdata);
-}
-
-uint16_t SPI_Read16(uint16_t chNo)
-{
-    uint16_t addr;
-    uint16_t rdata;
-
-    addr = (0x80 | (chNo << 3)) << 8;
-    SPI_write(halHandle->spiBHandle, addr);
-    while(SPI_getRxFifoStatus(halHandle->spiBHandle) != 1) { }
-    rdata = SPI_read(halHandle->spiBHandle);
-    rdata = rdata >> 2;
-    return (0x03FF & rdata);
-}
-#endif
 
 //*****************************************************************************
 //
