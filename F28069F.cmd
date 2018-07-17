@@ -65,7 +65,8 @@ MEMORY
 {
 PAGE 0 :   /* Program Memory */
            /* Memory (RAM/FLASH/OTP) blocks can be moved to PAGE1 for data allocation */
-   RAML0_1     : origin = 0x008000, length = 0x000C00     /* on-chip RAM block L0 and L1 */
+   /*RAML0_1     : origin = 0x008000, length = 0x000C00*/     /* on-chip RAM block L0 and L1 */
+   RAML0_1     : origin = 0x008000, length = 0x002000
    OTP         : origin = 0x3D7800, length = 0x000400     /* on-chip OTP */
 
    FLASHH      : origin = 0x3D8000, length = 0x004000     /* on-chip FLASH */
@@ -96,14 +97,15 @@ PAGE 1 :   /* Data Memory */
    BOOT_RSVD   : origin = 0x000000, length = 0x000050     /* Part of M0, BOOT rom will use this for stack */
    RAMM0       : origin = 0x000050, length = 0x0003B0     /* on-chip RAM block M0 */
    RAMM1       : origin = 0x000400, length = 0x000400     /* on-chip RAM block M1 */
-   RAML2_3     : origin = 0x008C00, length = 0x005400     /* on-chip RAM block L2 + L4*/
+   RAML2_3     : origin = 0x00A000, length = 0x006000 
+/*   RAML2_3     : origin = 0x008C00, length = 0x005400 */    /* on-chip RAM block L2 + L4*/
 /*   RAML2_3     : origin = 0x008C00, length = 0x001400 */    /* on-chip RAM block L2 */
 /*   RAML4       : origin = 0x00A000, length = 0x002000 */    /* on-chip RAM block L4 */
 /*   RAML5       : origin = 0x00C000, length = 0x002000 */    /* on-chip RAM block L5 */
-   RAML6       : origin = 0x00E000, length = 0x002000     /* on-chip RAM block L6 */
+/*   RAML6       : origin = 0x00E000, length = 0x002000  */   /* on-chip RAM block L6 */
    RAML7       : origin = 0x010000, length = 0x002000     /* on-chip RAM block L7 */
    RAML8       : origin = 0x012000, length = 0x001800     /* on-chip RAM block L8. From 0x13800 to 0x14000 is reserved for InstaSPIN */
-   USB_RAM     : origin = 0x040000, length = 0x000800     /* USB RAM		  */   
+   USB_RAM   : origin = 0x040000, length = 0x000800     /* USB RAM		  */   
 }
 
 /* Allocate sections to memory blocks.
@@ -152,7 +154,7 @@ SECTIONS
    FPUmathTables       : > FPUTABLES,  PAGE = 0, TYPE = NOLOAD
    
 /*   DMARAML5	           : > RAML5,      PAGE = 1 */
-   DMARAML6	           : > RAML6,      PAGE = 1
+/*   DMARAML6	           : > RAML6,      PAGE = 1 */
    DMARAML7	           : > RAML7,      PAGE = 1
    DMARAML8	           : > RAML8,      PAGE = 1   
 

@@ -57,6 +57,8 @@
 #pragma CODE_SECTION(mainISR,"ramfuncs");
 #pragma CODE_SECTION(timer0ISR,"ramfuncs");
 #pragma CODE_SECTION(MAIN_calculateIrms,"ramfuncs");
+#pragma CODE_SECTION(spiARxISR,"ramfuncs");
+#pragma CODE_SECTION(spiATxISR,"ramfuncs");
 #endif
 
 #include "uartstdio.h"
@@ -92,6 +94,7 @@
 
 #define KRPM_SCALE_FACTOR		(1000.0)
 
+#define US_TO_CNT(A) ((((long double) A * (long double)USER_SYSTEM_FREQ_MHz) - 9.0L) / 5.0L)
 // **************************************************************************
 // the extern function
 extern void dbg_logo(void);
@@ -291,6 +294,10 @@ _iq Iq_in = _IQ(0.0);
 
 extern uint32_t secCnt;
 
+uint16_t ret_status=1;
+uint16_t spi_seqNo=0, prev_seqNo=0;
+extern uint16_t spi_chk_ok, rx_seq_no, spi_checksum;
+
 void SetGpioInterrupt(void);
 
 #ifdef SUPPORT_AUTO_LOAD_TEST
@@ -451,10 +458,11 @@ float_t MAIN_getIw(void)
 
 float_t MAIN_getIave(void)
 {
-	static int cnt=0;
+	float_t ave;
 
-	//cnt = (cnt+1)%3;
-	return internal_status.Irms[cnt];
+	ave = (internal_status.Irms[0] + internal_status.Irms[1] + internal_status.Irms[2])/3.0;
+
+	return ave;
 }
 
 inline void MAIN_readCurrent(void)
@@ -1064,6 +1072,8 @@ void main(void)
   uint_least8_t ctrlNumber = 0;
 #endif
 
+//  uint16_t spi_rxBuf[4], spi_txBuf[2];
+
   // Only used if running from FLASH
   // Note that the variable FLASH is defined by the project
   #ifdef FLASH
@@ -1122,13 +1132,16 @@ void main(void)
   // set the hardware abstraction layer parameters
   HAL_setParams(halHandle,&gUserParams);
 
+
 #ifdef SUPPORT_V08_HW
   //SPI-A : slave
-  spi_fifo_init(halHandle->spiAHandle);
-  spi_init(halHandle->spiAHandle);
+  setupSpiA(halHandle->spiAHandle);
+//  spi_fifo_init(halHandle->spiAHandle);
+//  spi_init(halHandle->spiAHandle);
   //SPI-B : master
-  spi_fifo_init(halHandle->spiBHandle);
-  spi_init(halHandle->spiBHandle);
+//  spi_fifo_init(halHandle->spiBHandle);
+//  spi_init(halHandle->spiBHandle);
+  SPI_enableInt(halHandle->spiAHandle);
 #endif
 
   init_test_param(); // NV data initialize, will be removed after NV enabled
@@ -1235,6 +1248,9 @@ void main(void)
   //initialize timer variable
   TMR_init();
 
+#ifdef SUPPORT_SPI_INTERRUPT
+  SPI_enableInterrupt();
+#endif
 
 #ifdef SUPPORT_VF_CONTROL
 
@@ -1390,6 +1406,19 @@ void main(void)
     // Waiting for enable system flag to be set
     while(!(gMotorVars.Flag_enableSys))
 	{
+#if 1
+    	if(SPI_isPacketReceived())
+    	{
+//    		if((spi_chk_ok == 0 || (prev_seqNo+1) != spiRxBuf[1]) && prev_seqNo != 0)
+//    			UARTprintf("SPI seq error ! prev=%d cur=%d ok=%d\n", prev_seqNo, (uint16_t)spiRxBuf[1], spi_chk_ok);
+//    		else
+    			UARTprintf("SPI seq=%d recv ok=%d 0x%x\n", rx_seq_no, spi_chk_ok, spi_checksum);
+    		prev_seqNo = rx_seq_no;
+    		SPI_clearPacketReceived();
+    	}
+    	usDelay(US_TO_CNT(100));
+#endif
+
         processProtection();
 
         //TODO : should find correct location
@@ -2480,43 +2509,6 @@ float_t MAIN_getPwmFrequency(void)
 #else
 	return USER_PWM_FREQ_kHz;
 #endif
-}
-
-int UTIL_controlLed(int type, int on_off)
-{
-	int result = 0;
-
-	if(type == HAL_Gpio_LED_R || type == HAL_Gpio_LED_G)
-	{
-		if(on_off == 1)
-			HAL_setGpioHigh(halHandle,(GPIO_Number_e)type);
-		else
-			HAL_setGpioLow(halHandle,(GPIO_Number_e)type);
-	}
-	else
-	{
-		UARTprintf("Error : no LED type=%d \n", type);
-		result = 1;
-	}
-
-	return result;
-}
-
-// TODO : debug purpose only, using LED_R2 as test bit
-void UTIL_testbit(int on_off) // LD2
-{
-	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_R);
-}
-
-void UTIL_testbitG(int on_off) // LD1
-{
-	if(on_off == 1)
-		HAL_setGpioHigh(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
-	else
-		HAL_setGpioLow(halHandle,(GPIO_Number_e)HAL_Gpio_LED_G);
 }
 
 void UTIL_setInitRelay(void)

@@ -156,11 +156,13 @@ extern "C" {
 //#define   I_A_offset    (0.9966602325)
 //#define   I_B_offset    (0.9960474968)
 //#define   I_C_offset    (0.997712791)
+
 //for V0
 //#define   I_A_offset    (1.346306)
 //#define   I_B_offset    (1.363306)
 ////#define   I_C_offset    (1.333306)
 //#define   I_C_offset    (0.002903)
+
 //for V0.8
 #ifdef SUPPORT_I_SENSOR_10A //for half capacity current sensor
 #define   I_A_offset    (1.15)
@@ -422,6 +424,18 @@ extern "C" {
 
 #define USER_MOTOR_TYPE                 MOTOR_Type_Induction
 #define USER_MOTOR_NUM_POLE_PAIRS       (2)
+#if 0 // user motor identified value
+#define USER_MOTOR_Rr                   (2.14568) //(0.000357)
+#define USER_MOTOR_Rs					(3.86)
+#define USER_MOTOR_Ls_d                 (0.0296)
+#define USER_MOTOR_Ls_q                 USER_MOTOR_Ls_d
+#define USER_MOTOR_RATED_FLUX           (4.848)
+#define USER_MOTOR_MAGNETIZING_CURRENT  (3.0384)
+#define USER_MOTOR_RES_EST_CURRENT      (1.0)
+#define USER_MOTOR_IND_EST_CURRENT      (NULL)
+#define USER_MOTOR_MAX_CURRENT          (3.4)
+#define USER_MOTOR_FLUX_EST_FREQ_Hz     (5.0)
+#else // from data sheet
 #define USER_MOTOR_Rr                   (2.14568)
 #define USER_MOTOR_Rs                   (2.5)
 //#define USER_MOTOR_Ls_d                 (0.02791)
@@ -435,6 +449,7 @@ extern "C" {
 #define USER_MOTOR_IND_EST_CURRENT      (NULL)
 #define USER_MOTOR_MAX_CURRENT          (3.4) //(4.0)
 #define USER_MOTOR_FLUX_EST_FREQ_Hz     (5.0)
+#endif
 
 #else
 #error No motor type specified

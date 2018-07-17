@@ -24,6 +24,9 @@
 // I sensor resolution increase
 //#define SUPPORT_I_SENSOR_10A
 
+// SPI communication for DSP <-> MCU
+#define SUPPORT_SPI_INTERRUPT
+
 #define SUPPORT_VF_CONTROL
 // for improve VF to be stable
 //#define SUPPORT_MODIFIED_VF

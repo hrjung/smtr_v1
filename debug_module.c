@@ -49,6 +49,18 @@ const char *res_str[2] = { "OK", "NOK" };
  * TYPEDEFS
  */
 
+typedef union
+{
+  uint16_t i_word[2];
+  float_t f_data;
+} union_fdata;
+
+typedef union
+{
+  uint16_t i_word[2];
+  uint32_t l_data;
+} union_ldata;
+
 typedef enum {
 	DBG_CMD_SHOW_HELP,
 	DBG_CMD_ECHO_CONFIG,
@@ -147,14 +159,17 @@ extern void DCIB_setFlag(void);
 extern void UTIL_clearInitRelay(void);
 extern float_t UTIL_readIpmTemperature(void);
 extern float_t UTIL_readMotorTemperature(void);
+
 #ifdef SUPPORT_AUTO_LOAD_TEST
 extern bool UTIL_readSwGpio(void);
 extern int TEST_readSwitch(void);
 #endif
+
 #ifdef SUPPORT_FULL_LOAD_TEST
 extern bool UTIL_readSwGpio(void);
 extern int TEST_readSwitch(void);
 #endif
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  */
@@ -1562,8 +1577,24 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     }
     else if(index == 3) // check sizeof(int) -> 2byte
     {
-    	unsigned int a=0xFFFE;
-    	UARTprintf("a=%d b=%d \n", (unsigned int)(a+1), (unsigned int)(a+2));
+//    	unsigned int a=0xFFFE;
+//    	UARTprintf("a=%d b=%d \n", (unsigned int)(a+1), (unsigned int)(a+2));
+
+    	// float, long -> word array : using union
+    	uint32_t i_data=0x10001;
+    	float_t f_data=3.14;
+    	union_fdata fdata, fdata2;
+    	union_ldata ldata, ldata2;
+
+
+    	ldata.l_data = i_data;
+    	ldata2.i_word[0] = ldata.i_word[0];
+    	ldata2.i_word[1] = ldata.i_word[1];
+
+    	fdata.f_data = f_data;
+    	fdata2.i_word[0] = fdata.i_word[0];
+    	fdata2.i_word[1] = fdata.i_word[1];
+    	UARTprintf("ldata %l, fdata %f\n", (uint32_t)ldata2.l_data, fdata2.f_data);
     }
     else if(index == 4) //
     {
