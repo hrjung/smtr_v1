@@ -308,63 +308,62 @@ interrupt void spiARxISR(void)
 		{
 			// verify checksum
 			for(i=0; i<spiRx.idx-1; i++) checksum += spiRx.buf[i];
-			if(checksum == spiRx.buf[spiRx.idx-1]) spi_chk_ok=1;
-			else spi_chk_ok=0;
-#if 1
-			seq_no = spiRx.buf[3];
-			cmd = spiRx.buf[4]&0x00FF;
-			if(cmd&0x001F) // command
+			if(checksum == spiRx.buf[spiRx.idx-1]) // checksum verified
 			{
-				switch(cmd&0x001F)
+				spi_chk_ok=1;
+
+				seq_no = spiRx.buf[3];
+				cmd = spiRx.buf[4]&0x00FF;
+				if(cmd&0x001F) // command
 				{
-				case SPICMD_CTRL_RUN:
-				case SPICMD_CTRL_STOP:
-				case SPICMD_CTRL_DIR_F:
-				case SPICMD_CTRL_DIR_R:
-					break;
+					switch(cmd&0x001F)
+					{
+					case SPICMD_CTRL_RUN:
+					case SPICMD_CTRL_STOP:
+					case SPICMD_CTRL_DIR_F:
+					case SPICMD_CTRL_DIR_R:
+						break;
 
-				case SPICMD_PARAM_W:
+					case SPICMD_PARAM_W:
 
-					break;
+						break;
+					}
+
+					//generate ack response
+					SPI_makeResponse(seq_no, SPI_ACK);
+
 				}
-
-				//generate ack response
-				SPI_makeResponse(seq_no, SPI_ACK);
-
-			}
-			else if(cmd&0x00E0) // status request
-			{
-				switch(cmd&0x00E0)
+				else if(cmd&0x00E0) // status request
 				{
-				case SPICMD_REQ_ST:
-					SPI_makeStatusResponse(seq_no);
-					break;
+					switch(cmd&0x00E0)
+					{
+					case SPICMD_REQ_ST:
+						SPI_makeStatusResponse(seq_no);
+						break;
 
-				case SPICMD_REQ_ERR:
-					SPI_makeErrorResponse(seq_no);
-					break;
+					case SPICMD_REQ_ERR:
+						SPI_makeErrorResponse(seq_no);
+						break;
 
-				case SPICMD_PARAM_R:
-					SPI_makeParamResponse(seq_no, spiRx.buf[5]);
+					case SPICMD_PARAM_R:
+						SPI_makeParamResponse(seq_no, spiRx.buf[5]);
+					}
+
 				}
-
+				else
+					spi_chk_ok=0; // unrecognized command
 			}
 			else
+				spi_chk_ok=0; // checksum error
+
+
+			if(spi_chk_ok == 0)
 			{
 				//NAK response
 				SPI_makeResponse(seq_no, SPI_NAK); // seq no
 			}
-#else
-			if(spiRxBuf[4] == 0x100 || spiRxBuf[4] == 0x80)
-			{
-				//if(spiRxBuf[2] == 0x100)  // request ACK
-				{
-					SPI_makeResponse(spiRx.buf[3], SPI_ACK);
-				}
-			}
 
-#endif
-
+			// end of receiving
 			for(i=0; i<spiRx.idx; i++) spiRx.buf[i] = 0;
 
 			spiRx.idx = 0;
@@ -373,8 +372,8 @@ interrupt void spiARxISR(void)
 			rx_seq_no = seq_no;
 			spi_checksum = checksum;
 
-//			SPI_resetTxFifo(halHandle->spiAHandle);
-//			SPI_enableTxFifo(halHandle->spiAHandle);
+			SPI_resetTxFifo(halHandle->spiAHandle);
+			SPI_enableTxFifo(halHandle->spiAHandle);
 			// write 1st word for next transmit
 //			spiTxIdx=0;
 //			SPI_write(halHandle->spiAHandle, spiTxBuf[spiTxIdx]);
