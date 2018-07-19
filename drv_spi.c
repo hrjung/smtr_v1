@@ -17,6 +17,7 @@
 #include "drv_spi.h"
 #include "spi.h"
 #include "common_tools.h"
+#include "parameters.h"
 //*****************************************************************************
 //
 //! \addtogroup modebus_api
@@ -230,27 +231,55 @@ void SPI_enableInterrupt(void)
 
 void SPI_makeStatusResponse(uint16_t seq_no)
 {
+	uint16_t i, checksum=0, size;
+	uint16_t buf[20];
 
+	buf[0] = 0xAAAA;
+	buf[1] = 0x5555;
+	buf[3] = seq_no;
+	buf[4] = SPICMD_RESP_ST;
+	size = PARAM_getInvStatus(&buf[5]);
+	txLen = 6+size;
+	buf[2] = txLen; //18
+
+	for(i=0; i<txLen-1; i++) checksum += buf[i];
+	buf[txLen-1] = checksum;
+
+	for(i=0; i<txLen; i++) spiTx.buf[i] = buf[i];
 }
 
 void SPI_makeErrorResponse(uint16_t seq_no)
 {
+	uint16_t i, checksum=0, size;
+	uint16_t buf[15];
 
+	buf[0] = 0xAAAA;
+	buf[1] = 0x5555;
+	buf[3] = seq_no;
+	buf[4] = SPICMD_RESP_ERR;
+	size = PARAM_getErrorInfo(&buf[5]);
+	txLen = 6+size;
+	buf[2] = txLen; //12
+
+	for(i=0; i<txLen-1; i++) checksum += buf[i];
+	buf[txLen-1] = checksum;
+
+	for(i=0; i<txLen; i++) spiTx.buf[i] = buf[i];
 }
 
 void SPI_makeParamResponse(uint16_t seq_no, uint16_t index)
 {
-	uint16_t i, checksum=0;
+	uint16_t i, checksum=0, size;
 	uint16_t buf[10];
 
-	txLen = 9;
 	buf[0] = 0xAAAA;
 	buf[1] = 0x5555;
-	buf[2] = txLen;
 	buf[3] = seq_no;
 	buf[4] = SPICMD_RESP_PARAM;
 	buf[5] = index;
-	UTIL_packingParam(index, (uint16_t *)&buf[6]);
+	size = PARAM_getValue(index, (uint16_t *)&buf[6]);
+	txLen = 7+size;
+	buf[2] = txLen; //9
 
 	for(i=0; i<txLen-1; i++) checksum += buf[i];
 	buf[txLen-1] = checksum;
@@ -310,7 +339,7 @@ interrupt void spiARxISR(void)
 			for(i=0; i<spiRx.idx-1; i++) checksum += spiRx.buf[i];
 			if(checksum == spiRx.buf[spiRx.idx-1]) spi_chk_ok=1;
 			else spi_chk_ok=0;
-#if 1
+
 			seq_no = spiRx.buf[3];
 			cmd = spiRx.buf[4]&0x00FF;
 			if(cmd&0x001F) // command
@@ -345,7 +374,7 @@ interrupt void spiARxISR(void)
 					break;
 
 				case SPICMD_PARAM_R:
-					SPI_makeParamResponse(seq_no, spiRx.buf[5]);
+					SPI_makeParamResponse(seq_no, spiRx.buf[5]); // index
 				}
 
 			}
@@ -354,17 +383,8 @@ interrupt void spiARxISR(void)
 				//NAK response
 				SPI_makeResponse(seq_no, SPI_NAK); // seq no
 			}
-#else
-			if(spiRxBuf[4] == 0x100 || spiRxBuf[4] == 0x80)
-			{
-				//if(spiRxBuf[2] == 0x100)  // request ACK
-				{
-					SPI_makeResponse(spiRx.buf[3], SPI_ACK);
-				}
-			}
 
-#endif
-
+			// end of receiving
 			for(i=0; i<spiRx.idx; i++) spiRx.buf[i] = 0;
 
 			spiRx.idx = 0;
