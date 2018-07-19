@@ -661,7 +661,7 @@ int MAIN_isMissingIphase(void)
 		internal_status.Iu_miss_cnt++;
 		if(internal_status.Iu_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
 		{
-			ERR_setTripFlag(TRIP_REASON_Iu_PHASE_MISS);
+			ERR_setTripFlag(TRIP_REASON_I_PHASE_MISS);
 			return 1;
 		}
 	}
@@ -674,7 +674,7 @@ int MAIN_isMissingIphase(void)
 		internal_status.Iw_miss_cnt++;
 		if(internal_status.Iw_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
 		{
-			ERR_setTripFlag(TRIP_REASON_Iw_PHASE_MISS);
+			ERR_setTripFlag(TRIP_REASON_I_PHASE_MISS);
 			return 1;
 		}
 	}
@@ -687,7 +687,7 @@ int MAIN_isMissingIphase(void)
 		internal_status.Iw_miss_cnt++;
 		if(internal_status.Iw_miss_cnt > CURRENT_MISS_COUNT_LIMIT)
 		{
-			ERR_setTripFlag(TRIP_REASON_Iv_PHASE_MISS);
+			ERR_setTripFlag(TRIP_REASON_I_PHASE_MISS);
 			return 1;
 		}
 	}

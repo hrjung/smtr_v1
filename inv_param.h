@@ -37,20 +37,15 @@
 #define TRIP_REASON_USER_STOP		7
 #define TRIP_REASON_EXTERNAL_TRIP	8
 #define TRIP_REASON_OVER_CURRENT	9
-
-#define TRIP_REASON_Iu_PHASE_MISS	10
-#define TRIP_REASON_Iv_PHASE_MISS	11
-#define TRIP_REASON_Iw_PHASE_MISS	12
+#define TRIP_REASON_I_PHASE_MISS	10
 
 
 #define TRIP_REASON_ARRAY_ERR		20
 #define TRIP_REASON_ACCEL_ERR		21
 #define TRIP_REASON_FREQ_RANGE_ERR	22
 #define TRIP_REASON_RPM_RANGE_ERR	23
-#define TRIP_REASON_NFC_CARD_ERR	24
-#define TRIP_REASON_NV_DATA_ERR		25
-#define TRIP_REASON_INPUT_VOLT_ERR	26
-#define TRIP_REASON_REGEN_CALC_ERR	27
+#define TRIP_REASON_INPUT_VOLT_ERR	24
+#define TRIP_REASON_REGEN_CALC_ERR	25
 
 
 #define TRIP_REASON_MAX				30
@@ -353,9 +348,6 @@ extern void UTIL_setShaftBrake(void);
 extern void UTIL_releaseShaftBrake(void);
 extern void UTIL_setScaleFactor(void);
 extern uint16_t UTIL_setPwmDuty(int duty);
-extern int UTIL_controlLed(int type, int on_off);
-extern void UTIL_testbit(int on_off);
-extern void UTIL_testbitG(int on_off);
 
 extern uint16_t UTIL_setRegenPwmDuty(int duty);
 extern float_t UTIL_readIpmTemperature(void);

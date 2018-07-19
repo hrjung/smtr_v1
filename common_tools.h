@@ -41,9 +41,9 @@ extern "C"
 //
 //*****************************************************************************
 
-extern void UTIL_packingParam(uint16_t index, uint16_t *buf);
-
-
+extern int UTIL_controlLed(int type, int on_off);
+extern void UTIL_testbit(int on_off);
+extern void UTIL_testbitG(int on_off);
 //*****************************************************************************
 //
 // Mark the end of the C bindings section for C++ compilers.
