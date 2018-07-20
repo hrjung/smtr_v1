@@ -135,11 +135,11 @@ int freq_step = 2;
  * EXTERNS
  */
 extern tBoolean g_bNewCmd;
-extern monitor_param_st mnt;
+//extern monitor_param_st mnt;
 extern uint32_t secCnt;
 extern MOTOR_working_st m_status;
 extern float_t sf4pu_rpm;
-extern USER_Params gUserParams;
+//extern USER_Params gUserParams;
 extern int for_rev_flag;
 extern int ovl_alarm_enable;
 extern uint16_t Vinst[];

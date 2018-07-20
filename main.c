@@ -221,7 +221,6 @@ _iq gTorque_Flux_Iq_pu_to_Nm_sf;
 
 
 
-//dev_param_st	dev_param;
 dev_const_st	dev_const;
 motor_param_st mtr;
 //inverter_param_st param;
@@ -760,6 +759,8 @@ _iq MAIN_avoidJumpSpeed(_iq spd_pu)
 
 void MAIN_setDeviceConstant(void)
 {
+	UTIL_setScaleFactor();
+
 	memset(&dev_const, 0, sizeof(dev_const));
 
 //	dev_const.spd_rpm_min = (mtr.rpm_min/dev_param.gear_ratio);
@@ -817,8 +818,6 @@ void MAIN_setDeviceConstant(void)
 	internal_status.regen_enabled = 0;
 	internal_status.trip_happened = 0;
 	internal_status.shaft_brake_enabled = 0;
-	internal_status.emergency_stop = 0;
-	internal_status.external_trip = 0;
 
 	internal_status.oc_count = 0;
 

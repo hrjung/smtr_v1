@@ -260,7 +260,7 @@ typedef struct
 	//trip_err_st		err_info;
 
 } inverter_param_st;
-#endif
+
 
 typedef struct
 {
@@ -276,6 +276,7 @@ typedef struct
 	uint32_t  	mtr_elapse_hour;	// motor total run time
 	uint32_t  	operating_hour;	// inverter on time
 } monitor_param_st;
+#endif
 
 typedef struct
 {
@@ -313,8 +314,6 @@ typedef struct
 	uint16_t	relay_enabled;
 	uint16_t	regen_enabled;
 	uint16_t 	trip_happened;
-	uint16_t	emergency_stop;
-	uint16_t	external_trip;
 	uint16_t 	shaft_brake_enabled;
 
 	uint16_t 	oc_count; // over current count
@@ -323,7 +322,6 @@ typedef struct
 } internal_status_st;
 
 
-//extern dev_param_st	dev_param;
 extern dev_const_st	dev_const;
 extern motor_param_st mtr;
 //extern inverter_param_st param;
