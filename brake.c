@@ -8,7 +8,8 @@
 
 #include "uartstdio.h"
 
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "drive.h"
 #include "state_func.h"
 #include "timer_handler.h"
@@ -62,12 +63,12 @@ extern uint32_t secCnt;
  */
 int BRK_isDCIBrakeEnabled(void)
 {
-	return (param.brk.method == DC_INJECT_BRAKE);
+	return (iparam[BRK_TYPE_INDEX].value.l == DC_INJECT_BRAKE);
 }
 
 int BRK_isFreeRunEnabled(void)
 {
-	if(param.brk.method == FREE_RUN_BRAKE
+	if(iparam[BRK_TYPE_INDEX].value.l == FREE_RUN_BRAKE
 		&& state_param.inv == STATE_DECEL
 		&& STA_getTargetFreq() == 0.0
 		&& STA_getCurFreq() != 0.0)
@@ -77,13 +78,11 @@ int BRK_isFreeRunEnabled(void)
 }
 
 
-
-
 int BRK_setBrakeMethod(uint16_t method)
 {
 	if(method > FREE_RUN_BRAKE) return 1;
 
-	param.brk.method = method;
+	iparam[BRK_TYPE_INDEX].value.l = method;
 
 	return 0;
 }
@@ -99,7 +98,7 @@ int BRK_setBrakeFreq(float_t freq)
 //	if(speed <= dev_const.spd_rpm_min || speed >= dev_const.spd_rpm_max)
 //		return 1;
 
-	param.brk.brake_freq = freq;
+	iparam[BRK_FREQ_INDEX].value.f = freq;
 
 	return 0;
 }
@@ -120,17 +119,12 @@ int BRK_setBrakeFreq(float_t freq)
 
 int DCIB_setStartFreq(float_t freq)
 {
-//	int max_speed = 500; // max start limit speed
-
-	// check valid range
-	//UARTprintf("freq min=%f max=%f\n", param.ctrl.freq_min, param.ctrl.freq_max);
 
 	if(freq < 0 || freq > DC_BRAKE_FREQ_LIMIT)
 		return 1;
 
-	param.brk.dci_start_freq = freq;
+	iparam[BRK_DCI_START_FREQ_INDEX].value.f = freq;
 
-	//return EEP_updateItem(BRK_DCI_START_FREQ_ADDR, (unsigned char *)&param.brk.dci_start_freq);
 	return 0;
 }
 
@@ -142,25 +136,25 @@ int DCIB_setBlockTime(float_t b_time)
 	else if(b_time < 0.0) return 1;
 
 	itime = (uint16_t)(b_time*10.0);
-	param.brk.dci_block_time = (float_t)itime/10.0;
+	iparam[BRK_DCI_BLOCK_TIME_INDEX].value.f = (float_t)itime/10.0;
 
-	UARTprintf(" DCB block time %f \n", param.brk.dci_block_time);
+	UARTprintf(" DCB block time %f \n", iparam[BRK_DCI_BLOCK_TIME_INDEX].value.f);
 
 	return 0;
 }
 
 int DCIB_setBrakeRate(float_t rate)
 {
-	uint16_t itime=0;
+	//uint16_t itime=0;
 
 	if(rate > DC_BRAKE_RATE_MAX) return 1;
 	else if(rate < 0.0) return 1;
 
-	itime = (uint16_t)rate;
-	param.brk.dci_braking_rate = (float_t)itime;
-	dev_const.dci_pwm_rate = param.brk.dci_braking_rate/100.0 * mtr.max_current*mtr.Rs;
+	//itime = (uint16_t)rate;
+	iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f = rate;
+	dev_const.dci_pwm_rate = iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f/100.0 * mtr.max_current*mtr.Rs;
 
-	UARTprintf(" DCB brake rate %f \n", param.brk.dci_braking_rate);
+	UARTprintf(" DCB brake rate %f \n", iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f);
 
 	return 0;
 }
@@ -173,9 +167,9 @@ int DCIB_setBrakeTime(float_t b_time)
 	else if(b_time < 0.0) return 1;
 
 	itime = (uint16_t)(b_time*10.0);
-	param.brk.dci_braking_time = (float_t)itime/10.0;
+	iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f = (float_t)itime/10.0;
 
-	UARTprintf(" DCB brake time %f \n", param.brk.dci_braking_time);
+	UARTprintf(" DCB brake time %f \n", iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f);
 
 	return 0;
 }
@@ -190,7 +184,7 @@ int DCIB_isBrakeTriggered(void)
 	if(state_param.inv == STATE_DECEL
 		&& STA_getTargetFreq() == 0.0
 		&& STA_getCurFreq() != 0.0
-		&& STA_getCurFreq() <= param.brk.dci_start_freq)
+		&& STA_getCurFreq() <= iparam[BRK_DCI_START_FREQ_INDEX].value.f)
 		return 1;
 
 	return 0;
@@ -200,14 +194,14 @@ extern int dc_pwm_off;
 int DCIB_processBrakeSigHandler(void)
 {
 
-	if(param.brk.method != DC_INJECT_BRAKE) return 0;
+	if(iparam[BRK_TYPE_INDEX].value.l != DC_INJECT_BRAKE) return 0;
 
 	switch(dci_state_flag)
 	{
 	case DCI_NONE_STATE: // check DCI start condition ->
 		if(DCIB_isBrakeTriggered())
 		{
-			TMR_startTimerSig(DCI_BRAKE_SIG_OFF_TSIG, param.brk.dci_block_time);
+			TMR_startTimerSig(DCI_BRAKE_SIG_OFF_TSIG, iparam[BRK_DCI_BLOCK_TIME_INDEX].value.f);
 			dci_state_flag = DCI_BLOCK_STATE;
 			UARTprintf("DCI handler NONE -> BLOCK, at %d\n", (int)secCnt);
 		}
@@ -218,7 +212,7 @@ int DCIB_processBrakeSigHandler(void)
 		if(TMR_isTimeout(DCI_BRAKE_SIG_OFF_TSIG))
 		{
 			TMR_disableTimerSig(DCI_BRAKE_SIG_OFF_TSIG);
-			TMR_startTimerSig(DCI_BRAKE_SIG_ON_TSIG, param.brk.dci_braking_time);
+			TMR_startTimerSig(DCI_BRAKE_SIG_ON_TSIG, iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f);
 			dci_state_flag = DCI_DC_BRAKE_STATE;
 			UARTprintf("DCI handler BLOCK -> BRAKE, at %d\n", (int)secCnt);
 		}

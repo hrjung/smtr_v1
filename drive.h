@@ -23,14 +23,6 @@
 #define 	ACCEL	0
 #define		DECEL	1
 
-
-#define 	DRV_SIO_DIN		0
-#define		DRV_SIO_DOUT	1
-
-#define		FIELDBUS_EXIST	0x01
-#define 	UIO_EXIST		0x02
-#define 	NFC_EXIST		0x04
-
 /*******************************************************************************
  * EXTERNS
  */

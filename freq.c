@@ -7,8 +7,8 @@
 #include <stdint.h>
 
 #include "uartstdio.h"
-
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "freq.h"
 #include "state_func.h"
 #include "drive.h"
@@ -25,6 +25,10 @@
 /*******************************************************************************
  * CONSTANTS
  */
+
+#define JMP_ENABLE_BASE		JUMP_ENABLE0_INDEX
+#define JMP_LOW_BASE		JUMP_LOW0_INDEX
+#define JMP_HIGH_BASE		JUMP_HIGH0_INDEX
 
 /*******************************************************************************
  * TYPEDEFS
@@ -54,6 +58,10 @@
  *  ======== local function ========
  */
 
+STATIC int FREQ_isJumpFreqUsed(int index)
+{
+	return (int)iparam[JMP_ENABLE_BASE + index].value.l;
+}
 
 
 STATIC int FREQ_isInJumpFreq(float_t value)
@@ -64,7 +72,7 @@ STATIC int FREQ_isInJumpFreq(float_t value)
 	{
 		if(FREQ_isJumpFreqUsed(i))
 		{
-			if(param.ctrl.jump[i].low <= value && param.ctrl.jump[i].high >= value)
+			if(iparam[JMP_LOW_BASE+i].value.f <= value && iparam[JMP_HIGH_BASE+i].value.f >= value)
 				return 1;
 		}
 	}
@@ -81,10 +89,10 @@ STATIC float_t FREQ_getRangedFreq(int cond, float_t value)
 	{
 		if(FREQ_isJumpFreqUsed(i))
 		{
-			if(param.ctrl.jump[i].low < value && param.ctrl.jump[i].high > value)
+			if(iparam[JMP_LOW_BASE+i].value.f < value && iparam[JMP_HIGH_BASE+i].value.f > value)
 			{
-				if(cond == ACCEL) return param.ctrl.jump[i].low;
-				else return param.ctrl.jump[i].high;
+				if(cond == ACCEL) return iparam[JMP_LOW_BASE+i].value.f;
+				else return iparam[JMP_HIGH_BASE+i].value.f;
 			}
 		}
 	}
@@ -112,9 +120,9 @@ int Freq_isInWorkingFreqRange(float_t value)
 
 	for(i=0; i<MAX_JUMP_FREQ_NUM; i++)
 	{
-		if(param.ctrl.jump[i].enable)
+		if(FREQ_isJumpFreqUsed(i))
 		{
-			if(value >= param.ctrl.jump[i].low && value <= param.ctrl.jump[i].high)
+			if(value >= iparam[JMP_LOW_BASE+i].value.f && value <= iparam[JMP_HIGH_BASE+i].value.f)
 				return 0;
 		}
 	}
@@ -125,7 +133,7 @@ int Freq_isInWorkingFreqRange(float_t value)
 
 int FREQ_setFreqValue(float_t value)
 {
-	param.ctrl.value = value;
+	iparam[FREQ_VALUE_INDEX].value.f = value;
 
 	STA_setNextFreq(value);
 	STA_calcResolution();
@@ -133,39 +141,39 @@ int FREQ_setFreqValue(float_t value)
 	return 0;
 }
 
-int FREQ_clearJumpFreq(int index)
+int FREQ_clearJumpFreq(uint16_t index)
 {
-	param.ctrl.jump[index].enable = 0;
-	param.ctrl.jump[index].low = NOT_INITIALIZED;
-	param.ctrl.jump[index].high = NOT_INITIALIZED;
+	iparam[JMP_ENABLE_BASE+index].value.l = 0;
+	iparam[JMP_LOW_BASE+index].value.f = NOT_INITIALIZED;
+	iparam[JMP_HIGH_BASE+index].value.f = NOT_INITIALIZED;
 
 	return 0;
 }
 
-int FREQ_setJumpFreqEnable(int index, int enable)
+int FREQ_setJumpFreqEnable(uint16_t index, uint16_t enable)
 {
-	param.ctrl.jump[index].enable = enable;
+	iparam[JMP_ENABLE_BASE+index].value.l = (uint32_t)enable;
 	dev_const.spd_jmp[index].enable = enable;
 
 	return 0;
 }
 
-int FREQ_setJumpFreqLow(int index, float_t low)
+int FREQ_setJumpFreqLow(uint16_t index, float_t low)
 {
 	if(!Freq_isInWorkingFreqRange(low)) return 1;
 
-	param.ctrl.jump[index].low = low;
+	iparam[JMP_LOW_BASE+index].value.f = low;
 
 	MAIN_setJumpSpeed(index, low, 0.0);
 
 	return 0;
 }
 
-int FREQ_setJumpFreqHigh(int index, float_t high)
+int FREQ_setJumpFreqHigh(uint16_t index, float_t high)
 {
 	if(!Freq_isInWorkingFreqRange(high)) return 1;
 
-	param.ctrl.jump[index].high = high;
+	iparam[JMP_HIGH_BASE+index].value.f = high;
 
 	MAIN_setJumpSpeed(index, 0.0, high);
 
@@ -181,9 +189,9 @@ int FREQ_setJumpFreqRange(int index, float_t low, float_t high)
 
 	if(!Freq_isInWorkingFreqRange(high)) return 1;
 
-	param.ctrl.jump[index].enable = 1;
-	param.ctrl.jump[index].low = low;
-	param.ctrl.jump[index].high = high;
+	iparam[JMP_ENABLE_BASE+index].value.l = 1;
+	iparam[JMP_LOW_BASE+index].value.f = low;
+	iparam[JMP_HIGH_BASE+index].value.f = high;
 
 	MAIN_setJumpSpeed(index, low, high);
 

@@ -246,6 +246,7 @@ typedef struct
 } motor_param_st;
 
 
+#if 0
 typedef struct
 {
 	drive_control_st	ctrl;
@@ -256,10 +257,10 @@ typedef struct
 	//osc_damp_st		osc_damp;
 
 	uint16_t		gear_ratio;
-	trip_err_st		err_info;
+	//trip_err_st		err_info;
 
 } inverter_param_st;
-
+#endif
 
 typedef struct
 {
@@ -325,7 +326,7 @@ typedef struct
 //extern dev_param_st	dev_param;
 extern dev_const_st	dev_const;
 extern motor_param_st mtr;
-extern inverter_param_st param;
+//extern inverter_param_st param;
 extern inv_state_st state_param;
 extern internal_status_st internal_status;
 

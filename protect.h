@@ -29,20 +29,20 @@
 ////////////////////////////////////////////////
 
 extern int OVL_isOverloadTripEnabled(void);
-extern void OVL_enbleOverloadTrip(int enable);
+extern void OVL_enbleOverloadTrip(uint16_t enable);
 
-extern int OVL_setWarningLevel(int level);
-extern int OVL_setTripLevel(int level);
-extern int OVL_setWarningTime(int dur);
-extern int OVL_setTripTime(int dur);
+extern int OVL_setWarningLevel(uint16_t level);
+extern int OVL_setTripLevel(uint16_t level);
+extern int OVL_setWarningTime(uint16_t dur);
+extern int OVL_setTripTime(uint16_t dur);
 
-extern int REGEN_setRegenResistence(float_t resist);
-extern int REGEN_setRegenResistencePower(uint16_t power);
+extern int REGEN_setRegenResistance(float_t resist);
+extern int REGEN_setRegenResistancePower(uint16_t power);
 extern int REGEN_setRegenThermal(float_t value);
 extern int REGEN_setRegenVoltReduction(uint16_t value);
 
-extern int OSC_setDampImpact(int value);
-extern int OSC_setDampFilter(int value);
+//extern int OSC_setDampImpact(int value);
+//extern int OSC_setDampFilter(int value);
 
 //extern int ETH_isElecThermalEnabled(void);
 //extern void ETH_enbleElecThermal(void);

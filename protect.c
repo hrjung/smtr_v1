@@ -9,7 +9,8 @@
 
 #include "uartstdio.h"
 
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "drive.h"
 #include "timer_handler.h"
 #include "protect.h"
@@ -86,13 +87,6 @@ typedef struct
  */
 
 static int evt_flag=0;
-
-#ifdef SUPPORT_REGEN_GPIO
-static uint32_t regen_duty=50;
-static uint32_t regen_start=0;
-extern uint32_t regen_timer;
-#endif
-
 static int regen_duty=0;
 
 protect_dc_st protect_dc;
@@ -132,56 +126,50 @@ extern int MAIN_isOverCurrent(void);
 
 int OVL_isOverloadTripEnabled(void)
 {
-	return (param.protect.ovl.enable == 1);
+	return (iparam[OVL_ENABLE_INDEX].value.l == 1);
 }
 
-void OVL_enbleOverloadTrip(int enable)
+void OVL_enbleOverloadTrip(uint16_t enable)
 {
-	param.protect.ovl.enable = enable;
-
-	//EEP_updateItem(OVL_ENABLE_ADDR, (unsigned char *)&param.protect.ovl.enable);
+	iparam[OVL_ENABLE_INDEX].value.l = enable;
 }
 
-int OVL_setWarningLevel(int level)
+int OVL_setWarningLevel(uint16_t level)
 {
 	if(level < TRIP_LEVEL_MIN || level > TRIP_LEVEL_WARN) return 1;
 
-	param.protect.ovl.wr_limit = level;
+	iparam[OVL_WARN_LIMIT_INDEX].value.l = level;
 
-	dev_const.warn_level = mtr.max_current*(float_t)param.protect.ovl.wr_limit/100.0;
+	dev_const.warn_level = mtr.max_current*(float_t)iparam[OVL_WARN_LIMIT_INDEX].value.l/100.0;
 
-	//return EEP_updateItem(OVL_WARN_LIMIT_ADDR, (unsigned char *)&param.protect.ovl.wr_limit);
 	return 0;
 }
 
-int OVL_setTripLevel(int level)
+int OVL_setTripLevel(uint16_t level)
 {
 	if(level < TRIP_LEVEL_MIN || level > TRIP_LEVEL_TRIP) return 1;
 
-	param.protect.ovl.tr_limit = level;
-	dev_const.trip_level = mtr.max_current*(float_t)param.protect.ovl.tr_limit/100.0;
+	iparam[OVL_TR_LIMIT_INDEX].value.l = level;
+	dev_const.trip_level = mtr.max_current*(float_t)iparam[OVL_TR_LIMIT_INDEX].value.l/100.0;
 
-	//return EEP_updateItem(OVL_TR_LIMIT_ADDR, (unsigned char *)&param.protect.ovl.tr_limit);
 	return 0;
 }
 
-int OVL_setWarningTime(int dur)
+int OVL_setWarningTime(uint16_t dur)
 {
-	if(dur < 0 || dur > TRIP_TIME_WARN_MAX) return 1;
+	if(dur > TRIP_TIME_WARN_MAX) return 1;
 
-	param.protect.ovl.wr_duration = dur;
+	iparam[OVL_WR_DURATION_INDEX].value.l = dur;
 
-	//return EEP_updateItem(OVL_WR_DURATION_ADDR, (unsigned char *)&param.protect.ovl.wr_duration);
 	return 0;
 }
 
-int OVL_setTripTime(int dur)
+int OVL_setTripTime(uint16_t dur)
 {
-	if(dur < 0 || dur > TRIP_TIME_TRIP_MAX) return 1;
+	if(dur > TRIP_TIME_TRIP_MAX) return 1;
 
-	param.protect.ovl.tr_duration = dur;
+	iparam[OVL_TR_DURATION_INDEX].value.l = dur;
 
-	//return EEP_updateItem(OVL_TR_TIME_ADDR, (unsigned char *)&param.protect.ovl.tr_duration);
 	return 0;
 }
 
@@ -204,7 +192,7 @@ int OVL_processOverloadWarning(float_t cur_val)
 			if(!TMR_isTimerEnabled(OVERLOAD_WARN_START_TSIG))
 			{
 				//start timer
-				TMR_startTimerSig(OVERLOAD_WARN_START_TSIG, (float_t)param.protect.ovl.tr_duration);
+				TMR_startTimerSig(OVERLOAD_WARN_START_TSIG, (float_t)iparam[OVL_TR_DURATION_INDEX].value.l);
 				UARTprintf("OVL warning started %f at %d\n", cur_val, (int)(secCnt/10));
 			}
 		}
@@ -239,7 +227,7 @@ int OVL_processOverloadWarning(float_t cur_val)
 			if(!TMR_isTimerEnabled(OVERLOAD_WARN_END_TSIG))
 			{
 				//start timer
-				TMR_startTimerSig(OVERLOAD_WARN_END_TSIG, (float_t)param.protect.ovl.tr_duration);
+				TMR_startTimerSig(OVERLOAD_WARN_END_TSIG, (float_t)iparam[OVL_TR_DURATION_INDEX].value.l);
 				UARTprintf("OVL warning end started %f at %d\n", cur_val, (int)(secCnt/10));
 			}
 		}
@@ -290,7 +278,7 @@ int OVL_processOverloadTrip(float_t cur_val)
 		if(!TMR_isTimerEnabled(OVERLOAD_TRIP_TSIG))
 		{
 			//start timer
-			TMR_startTimerSig(OVERLOAD_TRIP_TSIG, (float_t)param.protect.ovl.tr_duration);
+			TMR_startTimerSig(OVERLOAD_TRIP_TSIG, (float_t)iparam[OVL_TR_DURATION_INDEX].value.l);
 			UARTprintf("OVL trip started %f at %d\n", cur_val, (int)(secCnt/10));
 		}
 	}
@@ -356,32 +344,28 @@ int OVL_processOverCurrentTrip(float_t cur_val)
 }
 
 // valid resistance 150 ~ 500 ohm
-int REGEN_setRegenResistence(float_t resist)
+int REGEN_setRegenResistance(float_t resist)
 {
 	if(resist < REGEN_RESISTANCE_VALUE_MIN || resist > REGEN_RESISTANCE_VALUE_MAX) return 1;
 
-	param.protect.regen.resistance = resist;
+	iparam[REGEN_RESISTANCE_INDEX].value.f = resist;
 
-	//return EEP_updateRegenResistItem();
 	return 0;
 }
 
-int REGEN_setRegenResistencePower(uint16_t power)
+int REGEN_setRegenResistancePower(uint16_t power)
 {
-
 	if(power < 10) return 1;
 
-	param.protect.regen.power = power;
+	iparam[REGEN_POWER_INDEX].value.l = power;
 
-	//return EEP_updateRegenResistItem();
 	return 0;
 }
 
 int REGEN_setRegenThermal(float_t value)
 {
-	param.protect.regen.thermal = value;
+	iparam[REGEN_THERMAL_INDEX].value.f = value;
 
-	//return EEP_updateItem(REGEN_THERMAL_ADDR, (unsigned char *)&param.protect.regen.thermal);
 	return 0;
 }
 
@@ -389,9 +373,8 @@ int REGEN_setRegenVoltReduction(uint16_t value)
 {
 	if(value > 150) return 1;
 
-	param.protect.regen.band = value;
+	iparam[REGEN_BAND_INDEX].value.l = value;
 
-	//return EEP_updateItem(REGEN_BAND_ADDR, (unsigned char *)&param.protect.regen.band);
 	return 0;
 }
 
@@ -414,53 +397,22 @@ int REGEN_isEnabled(void)
 	return internal_status.regen_enabled;
 }
 
-#ifdef SUPPORT_REGEN_GPIO
-int32_t regen_diff=0;
-int REGEN_toggleRegenBit(void)
-{
-	regen_diff = regen_timer - regen_start;
-
-	if((regen_diff > 0) && (regen_diff < regen_duty))
-	{
-		UTIL_setRegenBit();
-	}
-	else if((regen_diff >= regen_duty) && (regen_diff < 100))
-	{
-		UTIL_clearRegenBit();
-	}
-	else //if(regen_diff >= 100)
-	{
-		regen_start = regen_timer;
-		UTIL_setRegenBit();
-	}
-
-	return 0;
-}
-#endif
-
 void REGEN_active(float_t dc_value)
 {
 	//int regen_duty;
 
 	internal_status.regen_enabled = 1;
-#ifdef SUPPORT_REGEN_GPIO
-	regen_start=regen_timer; // start regen PWM output
-	UTIL_setRegenBit();
-#else
+
 	regen_duty = REGEN_setRegenDuty(dc_value);
 	UTIL_setRegenPwmDuty(regen_duty);
-#endif
 }
 
 void REGEN_end(void)
 {
 	internal_status.regen_enabled = 0;
 	//regen_duty = 0;
-#ifdef SUPPORT_REGEN_GPIO
-	UTIL_clearRegenBit(); // stop regen PWM output
-#else
+
 	UTIL_setRegenPwmDuty(0);
-#endif
 }
 
 int REGEN_process(float_t dc_volt)
@@ -481,7 +433,7 @@ int REGEN_process(float_t dc_volt)
 	{
 		if(dc_volt < protect_dc.dc_volt_init_relay_on - 20.0) //&& dc_volt > protect_dc.dc_volt_init_relay_off)
 		{
-			//TODO : DC under voltage trip
+			// DC under voltage trip
 			if(under_flag==0)
 			{
 				UARTprintf("DC under voltage %f trip event happened at %d\n", dc_volt, (int)(secCnt/10));
@@ -506,7 +458,7 @@ int REGEN_process(float_t dc_volt)
 
 	if(dc_volt > protect_dc.dc_volt_over_trip_level)
 	{
-		//TODO : DC over voltage trip
+		// DC over voltage trip
 		if(over_flag==0)
 		{
 			UARTprintf("DC over voltage %dV trip event happened at %d\n", dc_volt, (int)(secCnt/10));
@@ -516,12 +468,6 @@ int REGEN_process(float_t dc_volt)
 		return 1; // disable PWM after return
 	}
 
-#if 0
-	if(REGEN_isEnabled())
-	{
-		REGEN_toggleRegenBit();
-	}
-#else
 	if(dc_volt > protect_dc.dc_volt_start_regen_level) //dev_const.regen_limit + param.protect.regen.band)
 	{
 		if(regen_flag==0)
@@ -540,13 +486,8 @@ int REGEN_process(float_t dc_volt)
 			UARTprintf("REGEN_end() DC=%f\n", dc_volt);
 			REGEN_end();
 			regen_flag=0;
-#ifdef SUPPORT_REGEN_GPIO
-		else
-			REGEN_toggleRegenBit();
-#endif
 		}
 	}
-#endif
 
 	return 0;
 }

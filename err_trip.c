@@ -8,6 +8,7 @@
 
 #include "uartstdio.h"
 //#include "nv_param.h"
+#include "parameters.h"
 #include "inv_param.h"
 #include "drive.h"
 #include "state_func.h"
@@ -38,8 +39,6 @@
  * LOCAL FUNCTIONS
  */
 
-//static int err_index=0;
-int ERR_setTripInfo(int code);
 
 /*******************************************************************************
  * GLOBAL VARIABLES
@@ -49,6 +48,7 @@ int ERR_setTripInfo(int code);
  * EXTERNS
  */
 extern MOTOR_working_st m_status;
+
 
 /*
  *  ======== local function ========
@@ -64,41 +64,7 @@ void ERR_setTripFlag(int cause)
 	if(internal_status.trip_happened != cause) // avoid duplicated
 	{
 		internal_status.trip_happened = cause;
-		ERR_setTripInfo(cause);
+		PARAM_setErrInfo(cause, m_status.status, m_status.current, m_status.cur_freq);
 	}
 }
 
-#if 0
-int ERR_setTripFlagAtInitNV(int cause)
-{
-	internal_status.trip_happened = cause;
-	ERR_setTripInfo(cause);
-
-	return 0;
-}
-#endif
-
-int ERR_clearTripData(void)
-{
-	param.err_info.code = 0;
-	param.err_info.freq = 0;
-	param.err_info.current = 0;
-	param.err_info.op_mode = 0;
-
-	return 0;
-}
-
-int ERR_setTripInfo(int code)
-{
-	param.err_info.code = code;
-	param.err_info.freq = m_status.cur_freq;
-	param.err_info.current = m_status.current;
-	param.err_info.op_mode = m_status.status;
-
-	return 0;
-}
-
-int ERR_getCurrentErrCode(void)
-{
-	return param.err_info.code;
-}

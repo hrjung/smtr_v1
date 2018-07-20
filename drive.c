@@ -16,11 +16,12 @@
 #include "uartstdio.h"
 #include "hal.h"
 
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "drive.h"
 #include "state_func.h"
 #include "freq.h"
-#include "err_trip.h"
+//#include "err_trip.h"
 
 /*******************************************************************************
  * MACROS
@@ -49,8 +50,8 @@ const float_t pwm_tbl[4] = { 6.0, 9.0, 12.0, 15.0 };
 /*******************************************************************************
  * GLOBAL VARIABLES
  */
-extern HAL_Handle halHandle;
-extern USER_Params gUserParams;
+//extern HAL_Handle halHandle;
+//extern USER_Params gUserParams;
 
 
 /*******************************************************************************
@@ -90,7 +91,7 @@ int DRV_setAccelTime(float_t value)
 {
 	if(value < MIN_ACCEL_TIME || value > MAX_ACCEL_TIME) return 1;
 
-	param.ctrl.accel_time = value;
+	iparam[ACCEL_TIME_INDEX].value.f = value;
 
 	//STA_setResolution(ACCEL, DRV_calculateAccelRate_krpm(value));
 
@@ -101,7 +102,7 @@ int DRV_setDecelTime(float_t value)
 {
 	if(value < MIN_ACCEL_TIME || value > MAX_ACCEL_TIME) return 1;
 
-	param.ctrl.decel_time = value;
+	iparam[DECEL_TIME_INDEX].value.f = value;
 
 	//STA_setResolution(DECEL, DRV_calculateAccelRate_krpm(value));
 
@@ -110,24 +111,24 @@ int DRV_setDecelTime(float_t value)
 
 int DRV_isVfControl(void)
 {
-	return (param.ctrl.vf_foc_sel == VF_CONTROL);
+	return (iparam[VF_FOC_SEL_INDEX].value.l == VF_CONTROL);
 }
 
 void DRV_enableVfControl(void)
 {
-	param.ctrl.vf_foc_sel = VF_CONTROL;
+	iparam[VF_FOC_SEL_INDEX].value.l = VF_CONTROL;
 }
 
 void DRV_enableFocControl(void)
 {
-	param.ctrl.vf_foc_sel = FOC_CONTROL;
+	iparam[VF_FOC_SEL_INDEX].value.l = FOC_CONTROL;
 }
 
 int DRV_setTorqueLimit(float_t limit)
 {
 	if(limit < 100.0 || limit > 220.0) return 0;
 
-	param.ctrl.foc_torque_limit = limit;
+	iparam[FOC_TORQUE_LIMIT_INDEX].value.f = limit;
 
 	return 0;
 }
@@ -136,7 +137,7 @@ int DRV_setEnergySave(int method)
 {
 	if(method < ESAVE_UNUSED || method > ESAVE_BOTH) return 1;
 
-	param.ctrl.energy_save = method;
+	iparam[ENERGY_SAVE_INDEX].value.l = method;
 
 	return 0;
 }
@@ -147,7 +148,7 @@ int DRV_setVoltageBoost(float_t value)
 
 	if(MAIN_isSystemEnabled()) return 1; // cannot update during motor running
 
-	param.ctrl.v_boost = value;
+	iparam[V_BOOST_INDEX].value.f = value;
 
 	MAIN_applyBoost();
 
@@ -160,7 +161,7 @@ int DRV_setPwmFrequency(int value)
 
 	if(MAIN_isSystemEnabled()) return 1;
 
-	param.ctrl.pwm_freq = value; //
+	iparam[PWM_FREQ_INDEX].value.l = value; //
 
 	//gUserParams.pwmPeriod_kHz = pwm_tbl[param.ctrl.pwm_freq];
 	//gUserParams.pwmPeriod_usec = 1000.0/gUserParams.pwmPeriod_kHz;
@@ -168,6 +169,7 @@ int DRV_setPwmFrequency(int value)
 	return 0;
 }
 
+#if 0
 int DRV_setSpdGainP(float_t value)
 {
 	if(value < 0.0 || value > 32767.0) return 1;
@@ -185,21 +187,22 @@ int DRV_setSpdGainI(float_t value)
 
 	return 0;
 }
+#endif
 
 float_t DRV_getPwmFrequency(void)
 {
-	return pwm_tbl[param.ctrl.pwm_freq];
+	return pwm_tbl[(int)iparam[PWM_FREQ_INDEX].value.l];
 }
 
 
 int DRV_runForward(int index)
 {
 	if(MAIN_isSystemEnabled())
-		STA_setNextFreq(param.ctrl.value);
+		STA_setNextFreq(iparam[FREQ_VALUE_INDEX].value.f);
 	else
 	{
 		MAIN_enableSystem(index);
-		UARTprintf("start running motor freq=%f\n", param.ctrl.value);
+		UARTprintf("start running motor freq=%f\n", iparam[FREQ_VALUE_INDEX].value.f);
 	}
 
     return 0;
@@ -208,11 +211,11 @@ int DRV_runForward(int index)
 int DRV_runBackward(int index)
 {
 	if(MAIN_isSystemEnabled())
-		STA_setNextFreq(param.ctrl.value);
+		STA_setNextFreq(iparam[FREQ_VALUE_INDEX].value.f);
 	else
 	{
 		MAIN_enableSystem(0);
-		UARTprintf("start running motor\n");
+		UARTprintf("start running motor freq=%f\n", iparam[FREQ_VALUE_INDEX].value.f);
 	}
 
     return 0;

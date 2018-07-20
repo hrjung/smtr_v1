@@ -9,7 +9,8 @@
 #include "uartstdio.h"
 
 #include "user.h"
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "state_func.h"
 #include "drive.h"
 #include "freq.h"
@@ -353,7 +354,8 @@ void STA_setCurSpeed(float_t cur_spd)
 
 float_t STA_getCurSpeed(void)
 {
-	return m_status.cur_rpm/param.gear_ratio;
+	//return m_status.cur_rpm/param.gear_ratio;
+	return m_status.cur_rpm;
 }
 
 float_t STA_getTargetFreq(void)
@@ -369,7 +371,7 @@ float_t STA_getCurFreq(void)
 void STA_setNextFreq(float_t value)
 {
 	// hrjung for direction test : direction is not controlled by sign of freq, only dir command
-	// TODO : require condition for Aanalog input command
+	// TODO : require condition for Analog input command
 //	if(value >= 0.0)
 //		MAIN_setForwardDirection();
 //	else
@@ -446,12 +448,12 @@ void STA_calcResolution(void)
 	if(diff > 0.0)
 	{
 		flag = ACCEL;
-		time = param.ctrl.accel_time;
+		time = iparam[ACCEL_TIME_INDEX].value.f;
 	}
 	else if(diff < 0.0)
 	{
 		flag = DECEL;
-		time = param.ctrl.decel_time;
+		time = iparam[DECEL_TIME_INDEX].value.f;
 		diff = (-1.0)*diff;
 	}
 	else
@@ -470,10 +472,10 @@ void STA_calcResolution4Reverse(float_t run_freq)
 	float_t diff = m_status.cur_freq;
 #endif
 
-	time = param.ctrl.accel_time;
+	time = iparam[ACCEL_TIME_INDEX].value.f;
 	STA_setResolution(ACCEL, DRV_calculateAccelRate_krpm(time, diff));
 
-	time = param.ctrl.decel_time;
+	time = iparam[DECEL_TIME_INDEX].value.f;
 	STA_setResolution(DECEL, DRV_calculateAccelRate_krpm(time, diff));
 }
 
@@ -496,7 +498,7 @@ float_t STA_getTrajResolution(void)
 void STA_setStopCondition(void)
 {
 	STA_setNextFreq(0.0);
-	switch(param.brk.method)
+	switch((int)iparam[BRK_TYPE_INDEX].value.l)
 	{
 	case REDUCE_SPEED_BRAKE:
 	case DC_INJECT_BRAKE:

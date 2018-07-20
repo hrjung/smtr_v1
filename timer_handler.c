@@ -57,10 +57,6 @@ uint32_t run_time=0;
 uint32_t gTimerCount = 0;
 uint32_t secCnt = 0;
 
-#ifdef SUPPORT_REGEN_GPIO
-uint32_t regen_timer = 0;
-#endif
-
 timer_handler_st time_sig[MAX_TIMER_TSIG];
 /*******************************************************************************
  * EXTERNS
@@ -184,12 +180,6 @@ interrupt void timer0ISR(void)
 	// acknowledge the Timer 0 interrupt
 	HAL_acqTimer0Int(halHandle);
 
-#ifdef SUPPORT_REGEN_GPIO
-	{
-		regen_timer = gTimerCount; // 10Hz period, minimum pulse width is 100us
-	}
-#endif
-
 #if 0 // only for test without debug connection
 	if(internal_status.relay_enabled)
 	{
@@ -233,7 +223,7 @@ interrupt void timer0ISR(void)
     // periodic display
 	if(ipm_disp_on)
 	{
-		if(gTimerCount%1000 == 10)
+		if(gTimerCount%1000 == 10) // every 1sec
 		{
 			float_t ipm_temp;
 

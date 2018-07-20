@@ -28,6 +28,7 @@
 inv_parameter_st iparam[INV_PARAM_INDEX_MAX];
 inv_parameter_st err_info[ERR_CODE_MAX];
 inv_parameter_st inv_status[INV_STATUS_MAX];
+
 //*****************************************************************************
 //
 // Function implementation
@@ -102,8 +103,8 @@ void PARAM_init(void)
 	iparam[BRK_DCI_BRAKING_TIME_INDEX].type = PARAMETER_TYPE_FLOAT;
 	iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f = 5.0;
 
-	iparam[BRK_DCI_BRAKING_RATE_INDEX].type = PARAMETER_TYPE_LONG;
-	iparam[BRK_DCI_BRAKING_RATE_INDEX].value.l = 50;
+	iparam[BRK_DCI_BRAKING_RATE_INDEX].type = PARAMETER_TYPE_FLOAT;
+	iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f = 50.0;
 
 	iparam[OVL_WARN_LIMIT_INDEX].type = PARAMETER_TYPE_LONG;
 	iparam[OVL_WARN_LIMIT_INDEX].value.l = 150;
@@ -117,8 +118,8 @@ void PARAM_init(void)
 	iparam[OVL_TR_LIMIT_INDEX].type = PARAMETER_TYPE_LONG;
 	iparam[OVL_TR_LIMIT_INDEX].value.l = 180;
 
-	iparam[OVL_TR_TIME_INDEX].type = PARAMETER_TYPE_LONG;
-	iparam[OVL_TR_TIME_INDEX].value.l = 30;
+	iparam[OVL_TR_DURATION_INDEX].type = PARAMETER_TYPE_LONG;
+	iparam[OVL_TR_DURATION_INDEX].value.l = 30;
 
 	iparam[REGEN_RESISTANCE_INDEX].type = PARAMETER_TYPE_FLOAT;
 	iparam[REGEN_RESISTANCE_INDEX].value.f = 200.0;
@@ -157,6 +158,33 @@ void PARAM_init(void)
 	iparam[RATED_FREQ_INDEX].value.l = 60;
 
 	// error parameter
+	PARAM_initErrInfo();
+
+	// inverter status
+	PARAM_initInvStatus();
+
+}
+
+
+void PARAM_update(uint16_t index, uint16_t *buf)
+{
+	iparam[index].value.arr[0] = buf[0];
+	iparam[index].value.arr[1] = buf[1];
+}
+
+uint16_t PARAM_getValue(uint16_t index, uint16_t *buf)
+{
+#if 1 // test only
+	iparam[index].value.f = 3.14;
+#endif
+	buf[0] = iparam[index].value.arr[0];
+	buf[1] = iparam[index].value.arr[1];
+
+	return 2; // size
+}
+
+void PARAM_initErrInfo(void)
+{
 	err_info[ERR_CODE_INDEX].type = PARAMETER_TYPE_LONG;
 	err_info[ERR_CODE_INDEX].value.l = 0;
 
@@ -165,8 +193,36 @@ void PARAM_init(void)
 
 	err_info[ERR_FREQ_INDEX].type = PARAMETER_TYPE_FLOAT;
 	err_info[ERR_FREQ_INDEX].value.f = 0.0;
+}
 
-	// inverter status
+void PARAM_setErrInfo(uint16_t err_code, uint16_t err_status, float_t current, float_t freq)
+{
+	err_info[ERR_CODE_INDEX].value.arr[0] = err_code;
+	err_info[ERR_CODE_INDEX].value.arr[1] = err_status;
+	err_info[ERR_CURRENT_INDEX].value.f = current;
+	err_info[ERR_FREQ_INDEX].value.f = freq;
+}
+
+uint16_t PARAM_getErrorInfo(uint16_t *buf)
+{
+#if 1 // test only
+	err_info[ERR_CODE_INDEX].value.arr[0] = 0;
+	err_info[ERR_CODE_INDEX].value.arr[1] = 1;
+	err_info[ERR_CURRENT_INDEX].value.f = 10.5;
+	err_info[ERR_FREQ_INDEX].value.f = 120.0;
+#endif
+	buf[0] = err_info[ERR_CODE_INDEX].value.arr[0];
+	buf[1] = err_info[ERR_CODE_INDEX].value.arr[1];
+	buf[2] = err_info[ERR_CURRENT_INDEX].value.arr[0];
+	buf[3] = err_info[ERR_CURRENT_INDEX].value.arr[1];
+	buf[4] = err_info[ERR_FREQ_INDEX].value.arr[0];
+	buf[5] = err_info[ERR_FREQ_INDEX].value.arr[1];
+
+	return (ERR_CODE_MAX*2);
+}
+
+void PARAM_initInvStatus(void)
+{
 	inv_status[INV_STATUS_INDEX].type = PARAMETER_TYPE_LONG;
 	inv_status[INV_STATUS_INDEX].value.l = 0;
 
@@ -184,51 +240,6 @@ void PARAM_init(void)
 
 	inv_status[INV_MOTOR_TEMP_INDEX].type = PARAMETER_TYPE_FLOAT;
 	inv_status[INV_MOTOR_TEMP_INDEX].value.f = 0.0;
-
-}
-
-
-void PARAM_update(uint16_t index, uint16_t *buf)
-{
-	iparam[index].value.arr[0] = buf[0];
-	iparam[index].value.arr[1] = buf[1];
-}
-
-uint16_t PARAM_getValue(uint16_t index, uint16_t *buf)
-{
-#if 1
-	iparam[index].value.f = 3.14;
-#endif
-	buf[0] = iparam[index].value.arr[0];
-	buf[1] = iparam[index].value.arr[1];
-
-	return 2; // size
-}
-
-void PARAM_setErrInfo(uint16_t err_code, uint16_t err_status, float_t current, float_t freq)
-{
-	err_info[ERR_CODE_INDEX].value.arr[0] = err_code;
-	err_info[ERR_CODE_INDEX].value.arr[1] = err_status;
-	err_info[ERR_CURRENT_INDEX].value.f = current;
-	err_info[ERR_FREQ_INDEX].value.f = freq;
-}
-
-uint16_t PARAM_getErrorInfo(uint16_t *buf)
-{
-#if 1
-	err_info[ERR_CODE_INDEX].value.arr[0] = 0;
-	err_info[ERR_CODE_INDEX].value.arr[1] = 1;
-	err_info[ERR_CURRENT_INDEX].value.f = 10.5;
-	err_info[ERR_FREQ_INDEX].value.f = 120.0;
-#endif
-	buf[0] = err_info[ERR_CODE_INDEX].value.arr[0];
-	buf[1] = err_info[ERR_CODE_INDEX].value.arr[1];
-	buf[2] = err_info[ERR_CURRENT_INDEX].value.arr[0];
-	buf[3] = err_info[ERR_CURRENT_INDEX].value.arr[1];
-	buf[4] = err_info[ERR_FREQ_INDEX].value.arr[0];
-	buf[5] = err_info[ERR_FREQ_INDEX].value.arr[1];
-
-	return (ERR_CODE_MAX*2);
 }
 
 void PARAM_setInvStatus(uint16_t run, uint16_t dir, float_t icurr, float_t freq, float_t vdc, float_t ipm_t, float_t mtr_t)
@@ -245,7 +256,7 @@ void PARAM_setInvStatus(uint16_t run, uint16_t dir, float_t icurr, float_t freq,
 
 uint16_t PARAM_getInvStatus(uint16_t *buf)
 {
-#if 1
+#if 1 // test only
 	inv_status[INV_STATUS_INDEX].value.arr[0] = 0;
 	inv_status[INV_STATUS_INDEX].value.arr[1] = 1;
 	inv_status[INV_I_RMS_INDEX].value.f = 2.1;

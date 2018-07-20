@@ -63,7 +63,8 @@
 
 #include "uartstdio.h"
 
-#include "inv_param.h"
+#include "parameters.h"
+//#include "inv_param.h"
 #include "drive.h"
 #include "state_func.h"
 #include "freq.h"
@@ -223,10 +224,10 @@ _iq gTorque_Flux_Iq_pu_to_Nm_sf;
 //dev_param_st	dev_param;
 dev_const_st	dev_const;
 motor_param_st mtr;
-inverter_param_st param;
+//inverter_param_st param;
 internal_status_st internal_status;
 
-monitor_param_st mnt;
+//monitor_param_st mnt;
 inv_state_st state_param = {STATE_STOP, 0, STOP};
 
 float_t sf4pu_krpm, sf4krpm_pu;
@@ -356,7 +357,7 @@ int MAIN_convert2Speed(float speedRef)
 
 	//if(speedRef < 0) speed = -1.0*speedRef;
 
-	speed /= param.gear_ratio;
+	//speed /= param.gear_ratio;
 	speed *= KRPM_SCALE_FACTOR;
 
 //	if(speed > dev_const.spd_rpm_max) speed = dev_const.spd_rpm_max;
@@ -764,12 +765,12 @@ void MAIN_setDeviceConstant(void)
 //	dev_const.spd_rpm_min = (mtr.rpm_min/dev_param.gear_ratio);
 //	dev_const.spd_rpm_max = (mtr.rpm_max/dev_param.gear_ratio);
 //	dev_const.regen_limit = DC_VOLTAGE_END_REGEN_LEVEL;
-	dev_const.trip_level = mtr.max_current*(float_t)param.protect.ovl.tr_limit/100.0;
-	dev_const.warn_level = mtr.max_current*(float_t)param.protect.ovl.wr_limit/100.0;
+	dev_const.trip_level = mtr.max_current*(float_t)iparam[OVL_TR_LIMIT_INDEX].value.l/100.0;
+	dev_const.warn_level = mtr.max_current*(float_t)iparam[OVL_WARN_LIMIT_INDEX].value.l/100.0;
 	dev_const.ovc_level = mtr.max_current*3.0;
 
-	dev_const.regen_max_V = sqrtf(0.9*param.protect.regen.resistance*(float_t)param.protect.regen.power);
-	dev_const.dci_pwm_rate = param.brk.dci_braking_rate/100.0 * mtr.max_current*mtr.Rs*2.0; // use 2*Rs for Y connection
+	dev_const.regen_max_V = 0.9*sqrtf(iparam[REGEN_RESISTANCE_INDEX].value.f*(float_t)iparam[REGEN_POWER_INDEX].value.l);
+	dev_const.dci_pwm_rate = iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f/100.0 * mtr.max_current*mtr.Rs*2.0; // use 2*Rs for Y connection
 
 	//set additional flag
 
@@ -830,7 +831,7 @@ int MAIN_processDCBrake(void)
 	float_t dc_value=0.0;
 	static int block_flag=0, dc_brake_flag=0;
 
-	if(param.brk.method != DC_INJECT_BRAKE) return 0;
+	if(iparam[BRK_TYPE_INDEX].value.l != DC_INJECT_BRAKE) return 0;
 
 	switch(DCIB_getState())
 	{
@@ -883,6 +884,7 @@ int MAIN_processDCBrake(void)
 }
 #endif
 
+#if 0
 void initParam(void)
 {
 	UTIL_setScaleFactor();
@@ -920,7 +922,7 @@ void initParam(void)
 	param.brk.dci_braking_time = 2.0; // 1 sec brake
 
 	// default err_info setting
-	ERR_clearTripData();
+	//ERR_clearTripData();
 
 	// default protect setting
 	OVL_setWarningLevel(150); // Samyang motor's SF=1.15
@@ -935,8 +937,8 @@ void initParam(void)
 	param.protect.regen.band = 0;
 
 	param.gear_ratio = 1; //test
-
 }
+#endif
 
 void init_global(void)
 {
@@ -1137,7 +1139,8 @@ void main(void)
 #endif
 
   init_test_param(); // NV data initialize, will be removed after NV enabled
-  initParam();
+  //initParam();
+  PARAM_init();
 
   MAIN_setDeviceConstant();
   UTIL_setRegenPwmDuty(0);
@@ -1255,7 +1258,7 @@ void main(void)
   VS_FREQ_setParams(vs_freqHandle,  gUserParams.iqFullScaleFreq_Hz, gUserParams.iqFullScaleVoltage_V, gUserParams.maxVsMag_pu);
   //gUserParams.VF_freq_low = mtr.input_voltage*param.ctrl.v_boost/100.0;
   //VS_FREQ_setProfile(vs_freqHandle, gUserParams.VF_freq_low, gUserParams.VF_freq_high, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
-  if(param.ctrl.v_boost == 0.0)
+  if(iparam[V_BOOST_INDEX].value.f == 0.0)
 	  VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, gUserParams.VF_volt_min, gUserParams.VF_volt_max);
   else
 	  MAIN_applyBoost();
@@ -1712,7 +1715,7 @@ void main(void)
         else
 #endif
         {
-        	if(param.ctrl.energy_save == ESAVE_UNUSED)
+        	if(iparam[ENERGY_SAVE_INDEX].value.l == ESAVE_UNUSED)
         		gMotorVars.Flag_enablePowerWarp = false;
         	else
         		gMotorVars.Flag_enablePowerWarp = true;
@@ -2450,7 +2453,7 @@ int MAIN_enableSystem(int index)
 	gMotorVars.Flag_enableSys = true;
 	gMotorVars.Flag_Run_Identify = true;
 
-	STA_setNextFreq(param.ctrl.value);
+	STA_setNextFreq(iparam[FREQ_VALUE_INDEX].value.f);
 
 	block_count=0;
 
@@ -2484,7 +2487,7 @@ int MAIN_setReverseDirection(void)
 
 int MAIN_applyBoost(void)
 {
-	float_t voost_value = gUserParams.VF_volt_max*param.ctrl.v_boost/100.0;
+	float_t voost_value = gUserParams.VF_volt_max*iparam[V_BOOST_INDEX].value.f/100.0;
 	UARTprintf("Boost voltage value=%f\n", voost_value);
 
 	VS_FREQ_setProfile(vs_freqHandle, USER_MOTOR_FREQ_LOW, USER_MOTOR_FREQ_HIGH, voost_value, gUserParams.VF_volt_max);

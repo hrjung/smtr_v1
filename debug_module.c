@@ -14,10 +14,11 @@
 #include "main.h"
 
 #include "build_defs.h"
-//#include "parameter.h"
+#include "parameters.h"
 #include "uartstdio.h"
 #include "cmdline.h"
 
+#include "parameters.h"
 #include "inv_param.h"
 #include "motor_param.h"
 
@@ -28,6 +29,7 @@
 #include "protect.h"
 #include "err_trip.h"
 #include "timer_handler.h"
+#include "common_tools.h"
 
 
 /*******************************************************************************
@@ -141,6 +143,8 @@ extern USER_Params gUserParams;
 extern int for_rev_flag;
 extern int ovl_alarm_enable;
 extern uint16_t Vinst[];
+
+extern inv_parameter_st err_info[ERR_CODE_MAX];
 
 extern float_t MAIN_getPwmFrequency(void);
 extern float_t MAIN_getIu(void);
@@ -363,21 +367,21 @@ STATIC int dbg_processHelp(int argc, char *argv[])
 STATIC void dbg_showAccelTimeSetting(void)
 {
 	UARTprintf(" Accel/Decel time Settings\n");
-	UARTprintf("\t accel time %f decel time %f\n", param.ctrl.accel_time, param.ctrl.decel_time);
+	UARTprintf("\t accel time %f decel time %f\n", iparam[ACCEL_TIME_INDEX].value.f, iparam[DECEL_TIME_INDEX].value.f);
 }
 
 
 STATIC void dbg_showBrakeControlParam(void)
 {
 	UARTprintf(" Brake Control Settings\n");
-	UARTprintf("\t method %d, brk_freq %f\n", param.brk.method, param.brk.brake_freq);
+	UARTprintf("\t method %d, brk_freq %f\n", iparam[BRK_TYPE_INDEX].value.l, iparam[BRK_FREQ_INDEX].value.f);
 }
 
 STATIC void dbg_showDciBrakeParam(void)
 {
 	UARTprintf(" DC injection Brake Settings const=%f\n", dev_const.dci_pwm_rate);
-	UARTprintf("\t brake mode %d, start freq %f, block time %f\n", param.brk.method, param.brk.dci_start_freq, param.brk.dci_block_time);
-	UARTprintf("\t inject rate %f %%, time %f to brake\n", param.brk.dci_braking_rate, param.brk.dci_braking_time);
+	UARTprintf("\t brake mode %d, start freq %f, block time %f\n", iparam[BRK_TYPE_INDEX].value.l, iparam[BRK_DCI_START_FREQ_INDEX].value.f, iparam[BRK_DCI_BLOCK_TIME_INDEX].value.f);
+	UARTprintf("\t inject rate %f %%, time %f to brake\n", iparam[BRK_DCI_BRAKING_RATE_INDEX].value.f, iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f);
 }
 
 STATIC void dbg_showMotorParam(void)
@@ -396,8 +400,9 @@ STATIC void dbg_showTripData(void)
 	UARTprintf(" Error info display\n");
 	//for(i=0; i<FAULT_HISTORY_NUM; i++)
 	{
-		UARTprintf("\t errCode: %d, freq: %f, cur : %f, state=%s \n", \
-				param.err_info.code, param.err_info.freq, param.err_info.current, state_str[param.err_info.op_mode]);
+		UARTprintf("\t errCode: %d, state=%s, cur: %f, freq: %f \n", \
+				err_info[ERR_CODE_INDEX].value.arr[0], state_str[err_info[ERR_CODE_INDEX].value.arr[1]], \
+				err_info[ERR_CURRENT_INDEX].value.f, err_info[ERR_CURRENT_INDEX].value.f);
 	}
 }
 extern int REGEN_getDuty(void);
@@ -421,17 +426,17 @@ STATIC void dbg_showMonitorParam(void)
 STATIC void dbg_showOverloadParam(void)
 {
 	UARTprintf(" Overload Setting\n");
-	UARTprintf("\t enable: %d\n", param.protect.ovl.enable);
-	UARTprintf("\t Warning level: %d, duration: %d\n", param.protect.ovl.wr_limit, param.protect.ovl.wr_duration);
-	UARTprintf("\t Trip level: %d, duration: %d\n", param.protect.ovl.tr_limit, param.protect.ovl.tr_duration);
+	UARTprintf("\t enable: %d\n", iparam[OVL_ENABLE_INDEX].value.l);
+	UARTprintf("\t Warning level: %d, duration: %d\n", iparam[OVL_WARN_LIMIT_INDEX].value.l, iparam[OVL_WR_DURATION_INDEX].value.l);
+	UARTprintf("\t Trip level: %d, duration: %d\n", iparam[OVL_TR_LIMIT_INDEX].value.l, iparam[OVL_TR_DURATION_INDEX].value.l);
 	UARTprintf("\t warn: %f, trip: %f OVC: %f\n", dev_const.warn_level, dev_const.trip_level, dev_const.ovc_level);
 }
 
 STATIC void dbg_showRegenParam(void)
 {
 	float_t value = sqrtf(0.9*150.0*50.0);
-	UARTprintf("\t resistance ohm %f power %d \n", param.protect.regen.resistance, param.protect.regen.power);
-	UARTprintf("\t thermal %f reduction %d \n", param.protect.regen.thermal, param.protect.regen.band);
+	UARTprintf("\t resistance ohm %f power %d \n", iparam[REGEN_RESISTANCE_INDEX].value.f, iparam[REGEN_POWER_INDEX].value.l);
+	UARTprintf("\t thermal %f reduction %d \n", iparam[REGEN_THERMAL_INDEX].value.f, iparam[REGEN_BAND_INDEX].value.l);
 	UARTprintf("\t V_max %f %f regen_duty %d \n", dev_const.regen_max_V, value, REGEN_getDuty());
 }
 
@@ -479,8 +484,8 @@ STATIC int dbg_setJumpFreq(int argc, char *argv[])
     	UARTprintf("Jump frequency setting\n");
     	for(i=0; i<MAX_JUMP_FREQ_NUM; i++)
     	{
-    		if(param.ctrl.jump[i].enable)
-    			UARTprintf("  Jump freq[%d]: %f - %f\n", i, param.ctrl.jump[i].low, param.ctrl.jump[i].high);
+    		if(iparam[JUMP_ENABLE0_INDEX + i].value.l)
+    			UARTprintf("  Jump freq[%d]: %f - %f\n", i, iparam[JUMP_LOW0_INDEX+i].value.f, iparam[JUMP_HIGH0_INDEX+i].value.f);
     	}
 
     	return 0;
@@ -581,7 +586,7 @@ STATIC int dbg_setEnergySave(int argc, char *argv[])
 
 	if(argc == 1)
 	{
-		UARTprintf("energy save is %d\n", param.ctrl.energy_save);
+		UARTprintf("energy save is %d\n", iparam[ENERGY_SAVE_INDEX].value.l);
 		return 0;
 	}
 
@@ -605,7 +610,7 @@ STATIC int dbg_setVoltVoost(int argc, char *argv[])
 
 	if(argc == 1)
 	{
-		UARTprintf("v_boost is %f\n", param.ctrl.v_boost);
+		UARTprintf("v_boost is %f\n", iparam[V_BOOST_INDEX].value.f);
 		return 0;
 	}
 
@@ -835,11 +840,11 @@ STATIC int dbg_setDcInjBrake(int argc, char *argv[])
 		}
 		else if(strcmp(argv[1], "on") == 0)
 		{
-			param.brk.method = DC_INJECT_BRAKE;
+			iparam[BRK_TYPE_INDEX].value.l = DC_INJECT_BRAKE;
 		}
 		else if(strcmp(argv[1], "off") == 0)
 		{
-			param.brk.method = REDUCE_SPEED_BRAKE;
+			iparam[BRK_TYPE_INDEX].value.l = REDUCE_SPEED_BRAKE;
 		}
 		else
 			goto dcib_err;
@@ -1013,12 +1018,10 @@ tr_err:
 
 STATIC int dbg_removeTripInfo(int argc, char *argv[])
 {
-	int result;
-
 	if(argc > 1) goto rtr_err;
 
-	result = ERR_clearTripData();
-	UARTprintf("clear trip info is %s\n", res_str[result]);
+	PARAM_initErrInfo();
+	UARTprintf("clear trip info\n");
 
 	return 0;
 
@@ -1148,9 +1151,9 @@ STATIC int dbg_setRegen(int argc, char *argv[])
 		power = (uint16_t)atoi(argv[3]);
 		if(strcmp(argv[1], "res")==0)
 		{
-			result = REGEN_setRegenResistence(value);
+			result = REGEN_setRegenResistance(value);
 			UARTprintf("set regen resistance %d ohm is %s\n", value, res_str[result]);
-			result = REGEN_setRegenResistencePower(power);
+			result = REGEN_setRegenResistancePower(power);
 			UARTprintf("set regen power %d W is %s\n", power, res_str[result]);
 		}
 		else if(strcmp(argv[1], "thml")==0)
@@ -1174,7 +1177,7 @@ regen_err:
 STATIC int dbg_stepUpFreq(int argc, char *argv[])
 {
 	int result;
-	float_t f_value = param.ctrl.value;
+	float_t f_value = iparam[FREQ_VALUE_INDEX].value.f;
 
     if(argc > 2) goto up_err;
 
@@ -1193,7 +1196,7 @@ up_err:
 STATIC int dbg_stepDownFreq(int argc, char *argv[])
 {
 	int result;
-	float_t f_value = param.ctrl.value;
+	float_t f_value = iparam[FREQ_VALUE_INDEX].value.f;
 
     if(argc > 2) goto down_err;
 
@@ -1505,7 +1508,7 @@ iadc_err:
 unsigned long b = 0xFFFFFFFE;
 //extern float MAIN_convert2InternalSpeedRef(int freq);
 //extern int MAIN_convert2Speed(float speed);
-extern void initParam(void);
+//extern void initParam(void);
 
 #ifdef PWM_DUTY_TEST
 extern uint16_t gFlag_PwmTest;
@@ -1558,16 +1561,16 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     }
     else if(index == 1)
     {
-    	param.protect.ovl.tr_limit = 110;
-    	param.protect.ovl.tr_duration = 10;
+    	iparam[OVL_TR_LIMIT_INDEX].value.l = 110;
+    	iparam[OVL_TR_DURATION_INDEX].value.l = 10;
     	OVL_enbleOverloadTrip(1);
     	UARTprintf("OVL start = %d\n", (int)secCnt);
     }
     else if(index == 2)
     {
-    	param.brk.dci_start_freq = 20.0;
-    	param.brk.dci_block_time = 2.0;
-    	param.brk.dci_braking_time = 10.0;
+    	iparam[BRK_DCI_START_FREQ_INDEX].value.f = 20.0;
+    	iparam[BRK_DCI_BLOCK_TIME_INDEX].value.f = 2.0;
+    	iparam[BRK_DCI_BRAKING_TIME_INDEX].value.f = 10.0;
     	// enable DCI
     	UARTprintf("DCIB start = %d\n", (int)secCnt);
     }
@@ -1594,7 +1597,8 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
     }
     else if(index == 4) //
     {
-    	initParam();
+    	//initParam();
+    	PARAM_init();
     }
     else if(index == 5)
     {
@@ -1675,23 +1679,11 @@ STATIC int dbg_tmpTest(int argc, char *argv[])
 #endif
     else if(index == 'f')
     {
-#ifdef SUPPORT_REGEN_GPIO
-    	int enable;
-
-    	enable = atoi(argv[2]);
-    	if(enable == 1)
-    		REGEN_start();
-    	else
-    		REGEN_end();
-
-    	UARTprintf(" set REGEN enable=%d\n", enable);
-#else
     	int duty;
     	duty = atoi(argv[2]);
     	UTIL_setRegenPwmDuty(duty);
 
     	UARTprintf(" set REGEN pwm duty=%d\n", duty);
-#endif
     }
 #ifdef PWM_DUTY_TEST
     else if(index == 'p')

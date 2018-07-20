@@ -17,8 +17,6 @@
  * EXTERNS
  */
 extern void ERR_setTripFlag(int cause);
-extern int ERR_clearTripData(void);
-extern int ERR_setTripInfo(int code);
-extern int ERR_getCurrentErrCode(void);
+
 
 #endif /* ERR_TRIP_H_ */
